@@ -1,0 +1,60 @@
+body {
+  background-color: rgb(29, 83, 125);
+}
+
+h1 {
+  color: white;
+  text-align: center;
+}
+
+p {
+  font-family: verdana;
+  font-size: 20px;
+}
+
+
+.button {
+  padding: 15px 25px;
+  font-size: 24px;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+  color: #fff;
+  background-color: #4CAF50;
+  border: none;
+  border-radius: 15px;
+}
+
+.button:hover {background-color: #3e8e41}
+
+.button:active {
+  background-color: #3e8e41;
+  box-shadow: 0 2px rgba(165, 25, 25, 0.947);
+  transform: translateY(2px);
+}
+
+.button:hover {
+  background-color: #3e8e41;
+  color: white;
+}
+
+.button-group {   
+  /* background-color: yellow; */
+  /* border: 2px solid black; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+}
+
+.button-group > .button:not(:last-child) {
+  margin-right: 30px;
+}
+
+iframe {
+  display: flex;
+  width: 800px;
+  height:600px;
+  margin-left: auto;   /* Automatic margin from left */
+  margin-right: auto; /* Automatic margin from right */
+}
