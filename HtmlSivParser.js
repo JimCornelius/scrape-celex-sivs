@@ -61,7 +61,7 @@ export default class HtmlSivParser extends GenericSivParser {
             } else if (entry.value != undefined) {
                 // have an entry
                 if (entry.key == "MGB") {
-                    // Maghreb (MGB) countries
+                    // special case the Maghreb agreement covers Algeria, Morocco & Tunisia
                     this.setEntryInRecord(sivRecord, "Algeria", entry.value);
                     this.setEntryInRecord(sivRecord, "Morocco", entry.value);
                     this.setEntryInRecord(sivRecord, "Tunisia", entry.value);

@@ -134,7 +134,7 @@ export default class PdfSivParser extends GenericSivParser {
                     if (lookingForValue) {
                         if (!isNaN(txt)) {
                             if (country == "MGB") {
-                                // Maghreb (MGB) countries
+                               // special case the Maghreb agreement covers Algeria, Morocco & Tunisia
                                 this.setEntryInRecord(sivRecord, "Algeria", txt);
                                 this.setEntryInRecord(sivRecord, "Morocco", txt);
                                 this.setEntryInRecord(sivRecord, "Tunisia", txt);

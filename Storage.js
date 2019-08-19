@@ -84,6 +84,12 @@ export default class Storage {
             let iText = this.Config.countries.map(i=> i[1]).indexOf(txt);
             if (iText != -1) {
                 countryKey = this.Config.countries[iText][2];
+            } else {
+                if (txt == "MGB") {
+                    // special case the Maghreb agreement covers Algeria, 
+                    // Morocco & Tunisia
+                    countryKey = txt;
+                }
             }
         }
         return countryKey;
