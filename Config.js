@@ -2,8 +2,8 @@ import cnCodes from './data/cnCodes.json';
 import countries from './data/countries.json';
 
 export default class Config {
-    static startPos = 3000;
-    static puppeteerConfig = {headless: false};
+    static startPos = 0;
+    static puppeteerConfig = {headless: true};
     static urlConfig = {
         search: "https://eur-lex.europa.eu/search.html",
         lang: "lang=en",
@@ -26,7 +26,7 @@ export default class Config {
     }
 
     static storage = {
-        reset: false,
+        resetDB: false,
         resetLog: false,
 
         mongo: {

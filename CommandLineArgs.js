@@ -5,7 +5,7 @@ export default class CommandLineArgs {
     static commands = {
         "-p": {command:this.setPos, consumes: 2, args:[], run: false},
         "-l": {command:this.setResetLog , consumes: 1, args:[], run: false},
-        "-r": {command:this.setReset, consumes: 1, args:[], run: false},
+        "-r": {command:this.setResetDB, consumes: 1, args:[], run: false},
         "-h": {command:this.setHeadless , consumes: 1, args:[], run: false}
     };
 
@@ -34,5 +34,15 @@ export default class CommandLineArgs {
 
     static setPos(pos) {
         Config.starPos = pos;
+    }
+
+    static setResetLog() {
+        // reset log before running
+        Config.storage.resetLog = true;
+    }
+
+    static setResetDB() {
+        // reset db before running
+        Config.storage.resetDB = true;
     }
 }

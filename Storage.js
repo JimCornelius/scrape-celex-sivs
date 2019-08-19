@@ -20,9 +20,9 @@ export default class Storage {
                 Config.storage.mongo.url, Config.storage.mongo.clientOptions
             )).db(Config.storage.mongo.dbName);
 
-            if (Config.storage.reset) {
+            if (Config.storage.resetDB) {
                 console.log("resetting database");                 
-                await this.sivRecords.drop();
+                await this.sivDocs.drop();
             }
 
             // sivID collection will already exist
