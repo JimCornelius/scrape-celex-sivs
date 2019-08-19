@@ -48,6 +48,7 @@ export default class HtmlSivParser extends GenericSivParser {
                     console.log(`Fatal Error. Unknown variety code: ${element.innerText}`)
                     process.exit();
                 }
+                
                 // sivRecord will contain all prices, for this variety
                 sivRecord = this.storage.registerVariety(entry.variety);
                 if (sivRecord == undefined) {
