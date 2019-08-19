@@ -21,7 +21,8 @@ export default class Storage {
             )).db(Config.storage.mongo.dbName);
 
             if (Config.storage.resetDB) {
-                console.log("resetting database");                 
+                console.log("resetting database");
+                this.sivDocs = this.db.collection(Config.storage.mongo.sivDocs);               
                 await this.sivDocs.drop();
             }
 
