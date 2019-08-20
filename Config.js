@@ -25,6 +25,9 @@ export default class Config {
         "32005R2002": this.standardIgnoreMsg,
         "32005R1179": this.standardIgnoreMsg
     };
+    static dontIgnore = {
+        "32003R0779": "Only 5 varieties, but valid"
+    };
     static eurlex = {
         urlRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:",
         pdfRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:"

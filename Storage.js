@@ -8,6 +8,22 @@ export default class Storage {
         this.CNs = [];
         this.Config = Config;
 
+        //  validate that the country code list has no anomalies
+        const char2 = Config.countries.map(i => i[0]);
+        const digit3 = Config.countries.map(i => i[1]);
+        const excess2 = [...new Set(char2.filter(i => char2.indexOf(i) != char2.lastIndexOf(i)))];
+        const excess3 = [...new Set(digit3.filter(i => digit3.indexOf(i) != digit3.lastIndexOf(i)))];
+
+        //  validate that the country code list has no anomalies
+        if (excess2.length) {
+            console.log(`Fatal error: duplicate 2 letter country code(s): ${excess2.join(", ")}`);
+            process.exit();  
+        }
+        if (excess3.length) {
+            console.log(`Fatal error: duplicate 3 letter country code(s): ${excess3.join(", ")}`);
+            process.exit();  
+        }
+
         // for convenience concatenate variety CN codes where grouped 
         this.CNs = Object.fromEntries(
             Object.values(Config.cnCodes).map(
@@ -52,8 +68,10 @@ export default class Storage {
     async completeParseCelex() {
         if (Object.keys(this.celexDoc.varieties).length < 6) {
             // suspiciously short list of varieties, could be a correction, or basd parsing.
-            console.log(`Short list of varieties. Check whether it's a correction.`);
-            process.exit(1);
+            if (!this.celexDoc in this.Config.dontIgnore) {
+                console.log(`Short list of varieties. Check whether it's a correction.`);
+                process.exit(1);
+            }
         }
         // store complete document to mongo an reset current doc
         await this.storeAsDoc(this.sivDocs, this.celexDoc);
@@ -87,7 +105,7 @@ export default class Storage {
 
             // else
             // unknown 2 letter code ignore                        
-            // fail; 
+            // will fail; 
         }
         else if (txt.length == 3) {
             let iText = this.Config.countries.map(i=> i[1]).indexOf(txt);

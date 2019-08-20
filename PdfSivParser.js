@@ -99,7 +99,7 @@ export default class PdfSivParser extends GenericSivParser {
 
     async parsingComplete() {
         await new Promise((resolve, reject) => {
-            this.emitter.on("done",resolve);
+            this.emitter.once("done",resolve);
         });
     }
     
@@ -114,6 +114,7 @@ export default class PdfSivParser extends GenericSivParser {
             let sivRecord; 
             let country = undefined;
             let topFound = false;
+            let partialVariety = "";
             for (let item of elements) {
                 const txt = GenericSivParser.fixUpTextItem(item.innerText);
                 // ignore everything till we have the date
@@ -151,8 +152,9 @@ export default class PdfSivParser extends GenericSivParser {
                                 }
                             }
                             if (lookingForVariety && !country) { 
-                                const variety = this.varietyFromItemText(txt);
+                                const variety = this.varietyFromItemText(partialVariety+txt);
                                 if (variety) {
+                                    partialVariety = "";
                                     if (this.storage.Config.selectedVarieties.includes(variety)) {
                                         // new variety, register it 
                                         sivRecord = this.storage.registerVariety(variety);
@@ -173,9 +175,16 @@ export default class PdfSivParser extends GenericSivParser {
                                     
                                     if (txt.length > 3 && /^[. 0-9]*$/.test(txt)) {
                                         // ignore if this is just the date
-                                        if (date != this.checkForPdfDate(txt)) {  
-                                            console.log(`Fatal error: Looking for variety; ${txt} does not match any known varieties`);
-                                            process.exit(1);
+                                        if (date != this.checkForPdfDate(txt)) { 
+                                            
+                                            // it could be that this is the first psrt of a variety split into separate spans
+                                            // test if it's a substring of a known variety
+                                            if (Object.values(this.storage.CNs).flat().some(i => i.includes(txt))) {
+                                                 partialVariety += txt;
+                                            } else {
+                                                console.log(`Fatal error: Looking for variety; ${txt} does not match any known varieties`);
+                                                process.exit(1);
+                                            }
                                         }
                                     }
                                 }
