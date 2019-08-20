@@ -40,9 +40,9 @@ class CelexSivScraper {
     }
 
     async scrapeCelex(celexDoc) {
-        if (celexDoc.celexID in this.storage.Config.ignore) {
+        if (celexDoc.celexID in Config.ignore) {
             console.log (`${celexDoc.celexID} ignored.` +
-                ` Reason: ${this.storage.Config.ignore[celexDoc.celexID]}`);
+                ` Reason: ${Config.ignore[celexDoc.celexID]}`);
         } else {
             var date = await this.htmlSivParser.parseHTMLDate(this.page);
             if (!date) {
@@ -62,15 +62,18 @@ class CelexSivScraper {
     async iterateThroughPages(celexDoc) {
         this.storage.incrementParsedCount();
         if (celexDoc) {
-            if (!await this.storage.checkDocExists(celexDoc.celexID)) {
+            if (celexDoc.celexID in Config.ignore) {
+                console.log (`${celexDoc.celexID} ignored.` +
+                    ` Reason: ${Config.ignore[celexDoc.celexID]}`);
+            } else if (!await this.storage.checkDocExists(celexDoc.celexID)) {
                 try {
                     console.log(`Processing ${celexDoc.celexID}`);
                     await this.gotoPage(celexDoc.celexID);
                     await this.scrapeCelex(celexDoc);
                 } catch(err) {
-                    console.log("caught Exception" + err.stack);
+                    console.log("Caught Exception" + err.stack);
                 }
-            }
+            }     
             else {
                 console.log(`Document for celex ${celexDoc.celexID} already exists`); 
             }

@@ -54,7 +54,7 @@ export default class PdfSivParser extends GenericSivParser {
     }
 
     async getElements (page) {
-        const selector = "span";
+        const selector = ".textLayer>span";
         return await page.$$eval(selector, elements =>
             elements.map(el => ({
                 tagName: el.tagName,
@@ -73,13 +73,13 @@ export default class PdfSivParser extends GenericSivParser {
                 window.exposedFunc("textlayerrendered", event.detail.pageNumber);
             });
 
-            var x = document.createElement("div");
-            var y = document.createElement("div");
-            document.body.appendChild(x);
-            x.appendChild(y);
-            x.id = "viewerContainer";
-            y.id = "viewer";
-            y.className = "pdfViewer";
+            var pdfContainer = document.createElement("div");
+            var viewer = document.createElement("div");
+            document.body.appendChild(pdfContainer);
+            pdfContainer.appendChild(viewer);
+            pdfContainer.id = "viewerContainer";
+            viewer.id = "viewer";
+            viewer.className = "pdfViewer";
         });
 
         // inject some code into the webpage to help us out with PDFs
@@ -113,80 +113,80 @@ export default class PdfSivParser extends GenericSivParser {
             let date;
             let sivRecord; 
             let country = undefined;
-    
-            let dateConfirmed = false;
-            let n = 0;
-            console.log(`Elements found: ${elements.length}`)
+            let topFound = false;
             for (let item of elements) {
-                console.log(`ELement ${n} text: ${item.innerText}`)
                 const txt = GenericSivParser.fixUpTextItem(item.innerText);
-                // ignore everything till we have the date and confirmed date
-                if (!dateConfirmed) {
-                    var thisDate = this.checkForPdfDate(txt);
-                    if (thisDate) {
-                        if (date == undefined) {
-                            date = thisDate;
-                        }
-                        else if (date == thisDate) {
-                            dateConfirmed = true;
-                            this.celexDoc.dateInJournal = date;
-                        }
+                // ignore everything till we have the date
+                if (!date) {
+                    date = this.checkForPdfDate(txt);
+                    if (date) {
+                        this.celexDoc.dateInJournal = date;
                     }
                 }
                 else {
-                    if (lookingForValue) {
-                        if (!isNaN(txt)) {
-                            this.setEntryInRecord(sivRecord, country, txt);
-                            lookingForVariety = true;
-                            lookingForValue = false;
-                            country = undefined;
-                        }
+                    // ignore everything till we're at the top of the SIV list
+                    if (!topFound) {
+                        topFound = (0 ==
+                            txt.localeCompare('standardimportvalue',
+                                undefined, { sensitivity: 'base' })); 
                     } else {
-                        if (country == undefined) {
-                            // will always be looking for the variery as well
-                            country = this.storage.findCountry(txt);
-                            if (country) {
-                                if([country].flat().some(i => sivRecord.hasOwnProperty(i))) {
-                                    console.log(`Already have an entry for ${sivRecord.variety} : ${country}`);
-                                    process.exit(1);
-                                } else {
-                                    lookingForValue = true;
+                        if (lookingForValue) {
+                            if (!isNaN(txt)) {
+                                this.setEntryInRecord(sivRecord, country, txt);
+                                lookingForVariety = true;
+                                lookingForValue = false;
+                                country = undefined;
+                            }
+                        } else {
+                            if (country == undefined) {
+                                // will always be looking for the variery as well
+                                country = this.storage.findCountry(txt);
+                                if (country) {
+                                    if([country].flat().some(i => sivRecord.hasOwnProperty(i))) {
+                                        console.log(`Already have an entry for ${sivRecord.variety} : ${country}`);
+                                        process.exit(1);
+                                    } else {
+                                        lookingForValue = true;
+                                    }
                                 }
                             }
-                        }
-                        if (lookingForVariety && !country) { 
-                            const variety = this.varietyFromItemText(txt);
-                            if (variety) {
-                                if (this.storage.Config.selectedVarieties.includes(variety)) {
-                                    // new variety, register it 
-                                    sivRecord = this.storage.registerVariety(variety);
-                                    if (sivRecord == undefined) {
-                                        console.log(`Fatal Error. Can't create`+
-                                        ` sivRecord ${entry.variety} duplicate suspected`); 
-                                        process.exit(1);
+                            if (lookingForVariety && !country) { 
+                                const variety = this.varietyFromItemText(txt);
+                                if (variety) {
+                                    if (this.storage.Config.selectedVarieties.includes(variety)) {
+                                        // new variety, register it 
+                                        sivRecord = this.storage.registerVariety(variety);
+                                        if (sivRecord == undefined) {
+                                            console.log(`Fatal Error. Can't create`+
+                                            ` sivRecord ${entry.variety} duplicate suspected`); 
+                                            process.exit(1);
+                                        }
+                                        lookingForVariety = false;
+                                        country = undefined;
+                                    } else {
+                                        // ignoring non selected varieties
                                     }
-                                    lookingForVariety = false;
-                                    country = undefined;
+
                                 } else {
-                                    // ignoring non selected varieties
-                                }
-
-                            } else {
-                                // There's no way to single out the varieties we could miss some unmapped ones
-                                // can't check all but if they look like potential varieties flag it as a non-fatal error
-                                if (txt.length > 3 && /^[. 0-9]*$/.test(txt)) {
-
-                                    console.log(`Not fatal error: Looking for variety; ${txt} does not match any known varieties`);
-                                    process.exit(1);
+                                    // There's no way to single out the varieties we could miss some unmapped ones
+                                    // can't check all but if it looks like a potential variety exist so we can manually check 
+                                    
+                                    if (txt.length > 3 && /^[. 0-9]*$/.test(txt)) {
+                                        // ignore if this is just the date
+                                        if (date != this.checkForPdfDate(txt)) {  
+                                            console.log(`Fatal error: Looking for variety; ${txt} does not match any known varieties`);
+                                            process.exit(1);
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            if (!dateConfirmed) {
+            if (!date) {
                 // fatal error unable to confirm the date for this CELEX
-                console.log(`Not fatal error: Looking for variety; ${txt} does not match any known varieties`);
+                console.log(`Fatal error: can't confirm date of PDF`);
                 process.exit(1);
             }
 

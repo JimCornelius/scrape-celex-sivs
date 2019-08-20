@@ -37,9 +37,6 @@ export default class Storage {
                 await this.messageLog.drop();
                 this.messageLog = this.db.collection('messageLog');
             }
-            
-            console.log("Created ");
-            // todo: test whether or not returning this is actually required
             return this; // when done
         })();
     }

@@ -40,7 +40,10 @@ export default class Config {
 
         mongo: {
             url: 'mongodb://localhost:27017',
-            clientOptions: {useNewUrlParser: true},
+            clientOptions: {
+                useNewUrlParser: true,
+                useUnifiedTopology: true
+                },
             dbName: 'SIVdb',
             knownIDs: "sivCelex",
             sivDocs: "sivDocs",
