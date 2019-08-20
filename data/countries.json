@@ -47,6 +47,7 @@
     ["CN","720","China, People’s Republic of","Often referred to as China"],
     ["CO","480","Colombia",""],
     ["CR","436","Costa Rica",""],
+    ["CS","094",["Serbia", "Montenegro"]],
     ["CU","448","Cuba",""],
     ["CV","247","Cape Verde",""],
     ["CX","834","Christmas Island",""],
@@ -128,6 +129,7 @@
     ["LY","216","Libyan Arab Jamahiriya","Often referred to as Libya"],
     ["MA","204","Morocco",""],
     ["MD","074","Moldova, Republic of",""],
+    ["ME","097","Montenegro",""],
     ["MG","370","Madagascar",""],
     ["MH","824","Marshall Islands",""],
     ["MK","096","Former Yugoslav Republic of Macedonia",""],
@@ -243,5 +245,6 @@
     ["QW","960","Countries and territories not specified within the framework of trade with third countries","Optional heading"],
     ["QX","977","Countries and territories not specified for commercial or military reasons","Optional heading"],
     ["QY","978","Countries and territories not specified for commercial or military reasons in the framework of intra-Community trade","Optional heading"],
-    ["QZ","979","Countries and territories not specified for commercial or military reasons in the framework of trade with third countries","Optional heading"]
+    ["QZ","979","Countries and territories not specified for commercial or military reasons in the framework of trade with third countries","Optional heading"],
+    ["???","MGB",["Algeria","Morocco","Tunisia"]]
 ]

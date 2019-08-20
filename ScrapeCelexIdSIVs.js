@@ -1,4 +1,3 @@
-// import puppeteer from 'puppeteer-firefox';
 import puppeteer from 'puppeteer';
 
 import Config from './Config.js';
@@ -41,13 +40,18 @@ class CelexSivScraper {
     }
 
     async scrapeCelex(celexDoc) {
-        var date = await this.htmlSivParser.parseHTMLDate(this.page);
-        if (!date) {
-            // parse PDF which is completed asynchronously
-            await this.pdfSivParser.parsePdf(celexDoc, this.page);
-        }
-        else {
-            await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
+        if (celexDoc.celexID in this.storage.Config.ignore) {
+            console.log (`${celexDoc.celexID} ignored.` +
+                ` Reason: ${this.storage.Config.ignore[celexDoc.celexID]}`);
+        } else {
+            var date = await this.htmlSivParser.parseHTMLDate(this.page);
+            if (!date) {
+                // parse PDF which is completed asynchronously
+                await this.pdfSivParser.parsePdf(celexDoc, this.page);
+            }
+            else {
+                await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
+            }
         }      
     };
 

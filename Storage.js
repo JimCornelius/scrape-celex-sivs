@@ -39,7 +39,6 @@ export default class Storage {
             }
             
             console.log("Created ");
-
             // todo: test whether or not returning this is actually required
             return this; // when done
         })();
@@ -54,6 +53,11 @@ export default class Storage {
     }
 
     async completeParseCelex() {
+        if (Object.keys(this.celexDoc.varieties).length < 6) {
+            // suspiciously short list of varieties, could be a correction, or basd parsing.
+            console.log(`Short list of varieties. Check whether it's a correction.`);
+            process.exit(1);
+        }
         // store complete document to mongo an reset current doc
         await this.storeAsDoc(this.sivDocs, this.celexDoc);
         console.log(`${this.parsedCount} : completed: ${this.celexDoc.celexID};` +
@@ -72,13 +76,21 @@ export default class Storage {
         // could be CN code or, on older files, code for country;
         if (txt.length == 2) {
             let iText = this.Config.countries.map(i=> i[0]).indexOf(txt);
+
+            if (iText == -1) {
+                // special case might be using the Greek Alphabet
+                // could be some others?
+                txt = txt.replace(String.fromCharCode(924),"M")
+                        .replace(String.fromCharCode(922),"K");
+                iText = this.Config.countries.map(i=> i[0]).indexOf(txt);
+            }
             if (iText != -1) {
                 countryKey = this.Config.countries[iText][2];
-            }
-            else{
-                // unknown 2 letter code ignore                        
-                // fail; 
-            }
+            }       
+
+            // else
+            // unknown 2 letter code ignore                        
+            // fail; 
         }
         else if (txt.length == 3) {
             let iText = this.Config.countries.map(i=> i[1]).indexOf(txt);
@@ -125,8 +137,10 @@ export default class Storage {
     }
 
     setCelexIDCursor(index = 0) {
-            // cursor for the whole collection
+        // cursor for the whole collection
+        // shoud only be called once
         this.cursor = this.knownIDs.find({}).skip(index);
+        this.cursor.batchSize(20);
         return this.cursor;
     }
 

@@ -52,7 +52,7 @@ export default class HtmlSivParser extends GenericSivParser {
                 // sivRecord will contain all prices, for this variety
                 sivRecord = this.storage.registerVariety(entry.variety);
                 if (sivRecord == undefined) {
-                    console.log(`Fata Error. Can't create`+
+                    console.log(`Fatal Error. Can't create`+
                     ` sivRecord ${entry.variety} duplicate suspected`); 
                     process.exit(1);
                 }
@@ -61,27 +61,26 @@ export default class HtmlSivParser extends GenericSivParser {
              
             } else if (entry.value != undefined) {
                 // have an entry
-                if (entry.key == "MGB") {
-                    // special case the Maghreb agreement covers Algeria, Morocco & Tunisia
-                    this.setEntryInRecord(sivRecord, "Algeria", entry.value);
-                    this.setEntryInRecord(sivRecord, "Morocco", entry.value);
-                    this.setEntryInRecord(sivRecord, "Tunisia", entry.value);
-                }
-                else  {
-                    this.setEntryInRecord(sivRecord, entry.key, entry.value);
-                } 
+                this.setEntryInRecord(sivRecord, entry.key, entry.value); 
                 entry.rawKey = undefined;                   
                 entry.key = undefined;
                 entry.value = undefined;
             } else if (entry.rawKey != undefined) {
                 // convertKey
-                const countryKey = this.storage.findCountry(entry.rawKey);
-
-                if (countryKey == undefined) {
-                    console.log(`Fata Error. Unknown country code ${entry.rawKey} ignored`); 
+                const country = this.storage.findCountry(entry.rawKey);
+                if (country == undefined) {
+                    console.log(`Fatal Error. Unknown country code ${entry.rawKey} ignored`); 
                     process.exit(1);
                 } else {
-                    entry.key = countryKey;
+                    if (entry.variety == undefined) {
+                        console.log(`Fatal Error. Country ${entry.rawKey}, before variety known.`); 
+                        process.exit(1);
+                    }
+                    if([country].flat().some(i => sivRecord.hasOwnProperty(i))) {
+                        console.log(`Fatal Error. Already have an entry for ${entry.variety} : ${country}`);
+                        process.exit(1);
+                    }
+                    entry.key = country;
                 }
             } else {
                 // no value, no new variety, no new key

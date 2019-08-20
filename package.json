@@ -1,22 +1,24 @@
 {
-  "name": "siv-celex-id-gatherer",
+  "name": "scrapecelexsivs",
   "version": "1.0.0",
   "description": "",
-  "main": "SivCelexIdGatherer.js",
+  "main": "ScrapeCelexIdSivs.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
-  "keywords": [],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JimCornelius/ScrapeCelexSIVs.git"
+  },
+  "author": "Jim Cornelius",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JimCornelius/ScrapeCelexSIVs/issues"
+  },
+  "homepage": "https://github.com/JimCornelius/ScrapeCelexSIVs#readme",
   "dependencies": {
-    "assert": "^2.0.0",
-    "mongodb": "^3.3.0-beta2",
-    "pdfjs": "^2.3.0",
-    "pdfjs-dist": "^2.1.266",
-    "puppeteer": "^1.19.0",
-    "puppeteer-firefox": "^0.5.0",
-    "webpack": "^4.39.2"
+    "mongodb": "^3.3.0",
+    "puppeteer": "^1.19.0"
   }
 }

@@ -105,7 +105,7 @@ export default class PdfSivParser extends GenericSivParser {
     
     async parsePdfTags() {
         try {
-            let elements = await this.getElements(this.page);
+            const elements = await this.getElements(this.page);
 
             let lookingForVariety = true;
             let lookingForValue = false;
@@ -114,9 +114,12 @@ export default class PdfSivParser extends GenericSivParser {
             let sivRecord; 
             let country = undefined;
     
-            var dateConfirmed = false;
+            let dateConfirmed = false;
+            let n = 0;
+            console.log(`Elements found: ${elements.length}`)
             for (let item of elements) {
-                let txt = GenericSivParser.fixUpTextItem(item.innerText);
+                console.log(`ELement ${n} text: ${item.innerText}`)
+                const txt = GenericSivParser.fixUpTextItem(item.innerText);
                 // ignore everything till we have the date and confirmed date
                 if (!dateConfirmed) {
                     var thisDate = this.checkForPdfDate(txt);
@@ -133,15 +136,7 @@ export default class PdfSivParser extends GenericSivParser {
                 else {
                     if (lookingForValue) {
                         if (!isNaN(txt)) {
-                            if (country == "MGB") {
-                               // special case the Maghreb agreement covers Algeria, Morocco & Tunisia
-                                this.setEntryInRecord(sivRecord, "Algeria", txt);
-                                this.setEntryInRecord(sivRecord, "Morocco", txt);
-                                this.setEntryInRecord(sivRecord, "Tunisia", txt);
-                            }
-                            else  {
-                                this.setEntryInRecord(sivRecord, country, txt);
-                            }
+                            this.setEntryInRecord(sivRecord, country, txt);
                             lookingForVariety = true;
                             lookingForValue = false;
                             country = undefined;
@@ -151,8 +146,9 @@ export default class PdfSivParser extends GenericSivParser {
                             // will always be looking for the variery as well
                             country = this.storage.findCountry(txt);
                             if (country) {
-                                if (sivRecord.hasOwnProperty(country)) {
+                                if([country].flat().some(i => sivRecord.hasOwnProperty(i))) {
                                     console.log(`Already have an entry for ${sivRecord.variety} : ${country}`);
+                                    process.exit(1);
                                 } else {
                                     lookingForValue = true;
                                 }

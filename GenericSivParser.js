@@ -25,13 +25,16 @@ export default class GenericSivParser {
     }
 
     setEntryInRecord(sivRecord, key, value) {
-        if (key in sivRecord) {
-            console.log(`Fatal error: duplicate country code in siv record: ${key}`)
-            process.exit();            
-        }
-        else {
-            sivRecord[key] = value;
-        } 
+        const keys = [key].flat();
+        keys.forEach((k) => {
+            if (k in sivRecord) {
+                console.log(`Fatal error: duplicate country code in siv record: ${k}`)
+                process.exit();            
+            }
+            else {
+                sivRecord[key] = value;
+            } 
+        });
     }
 
     storeRecord(celexDoc, variety, sivRecord) {

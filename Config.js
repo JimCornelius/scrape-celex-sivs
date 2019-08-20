@@ -8,13 +8,22 @@ export default class Config {
         search: "https://eur-lex.europa.eu/search.html",
         lang: "lang=en",
         type: "type=quick",
-        scope: "cope=EURLEX",
+        scope: "scope=EURLEX",
         sortBy: "sortOne=DD",
         sortOrder: "sortOneOrder=desc",
-        // this could be anyhing as long 
-        // as it's the same each timewe fetch with it
+        // The session could be anyhing as long 
+        // as it's the same each time we fetch with it
         sessionID: "qid=1563402353675", 
         searchTerm: 'text="establishing+the+standard+import+values"'
+    };
+    static standardIgnoreMsg =
+        "Standard CELEX code but this is a correction"+
+        " of earlier SIV. Manual DB correction required.";
+    static ignore = {
+        "32010R0944": this.standardIgnoreMsg,
+        "32008R0468": this.standardIgnoreMsg,
+        "32005R2002": this.standardIgnoreMsg,
+        "32005R1179": this.standardIgnoreMsg
     };
     static eurlex = {
         urlRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:",
