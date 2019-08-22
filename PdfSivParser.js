@@ -41,7 +41,8 @@ export default class PdfSivParser extends GenericSivParser {
         
         let loadingTask = pdfjsLib.getDocument({url: url});
         loadingTask.promise.then((pdfDocument) => {
-            
+            console.log("in promise of loading task");
+            console.log(pdfDocument.numPages);  
             if (pdfDocument.numPages > 5 ) {
                 // suspiciously high number of pages suggests
                 // this might not be what were' actually want
@@ -72,6 +73,11 @@ export default class PdfSivParser extends GenericSivParser {
             document.addEventListener('textlayerrendered', (event)  => {         
                 window.exposedFunc("textlayerrendered", event.detail.pageNumber);
             });
+            // something in the body of a few pages interferes with
+            // the rendering of the PDFs. Removing the body contents
+            // before injecting the pdfViewer fixes this
+            // It's a sledgehammer to crack a nut though.
+            document.body.innerHTML = "";
 
             var pdfContainer = document.createElement("div");
             var viewer = document.createElement("div");
@@ -89,17 +95,18 @@ export default class PdfSivParser extends GenericSivParser {
         await page.addScriptTag({ url: "https://unpkg.com/pdfjs-dist@2.2.228/web/pdf_viewer.js" });
         await page.waitForFunction("pdfjsViewer != undefined");
 
-        var result = await page.evaluate(
+        await page.evaluate(
             PdfSivParser.loadPdfDoc,
             this.storage.Config.eurlex.pdfRoot + celexDoc.celexID,
             this.storage.Config.pdfjs.workerSrc
         );
         await this.parsingComplete();
+        this.emitter.removeAllListeners();
     }
 
     async parsingComplete() {
         await new Promise((resolve, reject) => {
-            this.emitter.once("done",resolve);
+            this.emitter.on("done",resolve);
         });
     }
     
@@ -115,6 +122,7 @@ export default class PdfSivParser extends GenericSivParser {
             let country = undefined;
             let topFound = false;
             let partialVariety = "";
+            let lastTxt = undefined;
             for (let item of elements) {
                 const txt = GenericSivParser.fixUpTextItem(item.innerText);
                 // ignore everything till we have the date
@@ -127,9 +135,12 @@ export default class PdfSivParser extends GenericSivParser {
                 else {
                     // ignore everything till we're at the top of the SIV list
                     if (!topFound) {
-                        topFound = (0 ==
-                            txt.localeCompare('standardimportvalue',
-                                undefined, { sensitivity: 'base' })); 
+                        topFound = (
+                            (0 == txt.localeCompare('CNcode',
+                                undefined, { sensitivity: 'base' }))  ||
+                            (0 == (lastTxt+txt).localeCompare('CNcode',
+                                undefined, { sensitivity: 'base' }))     
+                                ); 
                     } else {
                         if (lookingForValue) {
                             if (!isNaN(txt)) {
@@ -139,20 +150,21 @@ export default class PdfSivParser extends GenericSivParser {
                                 country = undefined;
                             }
                         } else {
-                            if (country == undefined) {
+                            if (sivRecord && country == undefined) {
                                 // will always be looking for the variery as well
                                 country = this.storage.findCountry(txt);
                                 if (country) {
                                     if([country].flat().some(i => sivRecord.hasOwnProperty(i))) {
-                                        console.log(`Already have an entry for ${sivRecord.variety} : ${country}`);
-                                        process.exit(1);
-                                    } else {
-                                        lookingForValue = true;
+                                        if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
+                                            console.log(`Already have an entry for ${sivRecord.variety} : ${country}`);
+                                            process.exit(1);
+                                        }
                                     }
+                                    lookingForValue = true;
                                 }
                             }
                             if (lookingForVariety && !country) { 
-                                const variety = this.varietyFromItemText(partialVariety+txt);
+                                let variety = this.varietyFromItemText(partialVariety+txt);
                                 if (variety) {
                                     partialVariety = "";
                                     if (this.storage.Config.selectedVarieties.includes(variety)) {
@@ -160,7 +172,7 @@ export default class PdfSivParser extends GenericSivParser {
                                         sivRecord = this.storage.registerVariety(variety);
                                         if (sivRecord == undefined) {
                                             console.log(`Fatal Error. Can't create`+
-                                            ` sivRecord ${entry.variety} duplicate suspected`); 
+                                            ` sivRecord ${variety} duplicate suspected`); 
                                             process.exit(1);
                                         }
                                         lookingForVariety = false;
@@ -168,22 +180,35 @@ export default class PdfSivParser extends GenericSivParser {
                                     } else {
                                         // ignoring non selected varieties
                                     }
-
                                 } else {
-                                    // There's no way to single out the varieties we could miss some unmapped ones
-                                    // can't check all but if it looks like a potential variety exist so we can manually check 
                                     
+                                    // There's no way to single out the varieties we could miss some unmapped ones
+                                    // can't check all but if it looks like a potential variety exists we can manually check                                   
                                     if (txt.length > 3 && /^[. 0-9]*$/.test(txt)) {
                                         // ignore if this is just the date
-                                        if (date != this.checkForPdfDate(txt)) { 
-                                            
-                                            // it could be that this is the first psrt of a variety split into separate spans
-                                            // test if it's a substring of a known variety
-                                            if (Object.values(this.storage.CNs).flat().some(i => i.includes(txt))) {
-                                                 partialVariety += txt;
-                                            } else {
-                                                console.log(`Fatal error: Looking for variety; ${txt} does not match any known varieties`);
-                                                process.exit(1);
+                                        if (date != this.checkForPdfDate(txt)) {
+                                            if (!((partialVariety+txt) in this.storage.Config.ignoreVariertyDefinition)) {
+                                                if ((partialVariety+txt) in this.storage.Config.transcriptionErrors) {
+                                                    variety = this.varietyFromItemText(this.storage.Config.transcriptionErrors[partialVariety+txt]);
+                                                    if (this.storage.Config.selectedVarieties.includes(variety)) {
+                                                        sivRecord = this.storage.registerVariety(variety);                    
+                                                        lookingForVariety = false;
+                                                        country = undefined;                                                        
+                                                    }
+                                                    partialVariety = "";
+                                                } else {
+                                                    // it could be that this is the first part of a variety split into separate spans
+                                                    // test if it's a substring of a known variety
+                                                    if (Object.values(this.storage.CNs).flat().some(i => i.includes(txt))) {
+                                                        partialVariety += txt;
+                                                    } else {
+                                                        // is it another date?
+                                                        if (!this.checkForPdfDate(txt)) {
+                                                            console.log(`Fatal error: Looking for variety; ${txt} does not match any known varieties`);
+                                                            process.exit(1);
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -192,6 +217,7 @@ export default class PdfSivParser extends GenericSivParser {
                         }
                     }
                 }
+                lastTxt = txt;
             }
             if (!date) {
                 // fatal error unable to confirm the date for this CELEX
@@ -200,7 +226,7 @@ export default class PdfSivParser extends GenericSivParser {
             }
 
         } catch(err) {
-            console.log("caught Exception" + err.stack);
+            console.log("Caught exception" + err.stack);
             process.exit(1);
         }
 
@@ -209,11 +235,16 @@ export default class PdfSivParser extends GenericSivParser {
 
     checkForPdfDate(txt) {
         // look for date in format XX.XX.XXXX; X.XX.XXXX; XX.X.XXXX
-        let trio = txt.split(".");
+        let trio = txt.split(".").map(d => d.trim());
         if (trio.length!=3) return;
         if (trio.some(a => isNaN(a))) return;
         if (trio.some(a => (0==a))) return;
-        if (trio[0] >31 || trio[1] > 12 || trio[2] < 1957) return;
+        if (
+            trio[0] > 31 || trio[1] > 12 || (
+                (trio[2] < 57) || 
+                (trio[2] > 99 && trio[2] <1957)
+            )
+        ) return;
         
         return trio.join("/");
     }

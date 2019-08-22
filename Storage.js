@@ -66,9 +66,9 @@ export default class Storage {
     }
 
     async completeParseCelex() {
-        if (Object.keys(this.celexDoc.varieties).length < 6) {
+        if (Object.keys(this.celexDoc.varieties).length < this.Config.minVarieties) {
             // suspiciously short list of varieties, could be a correction, or basd parsing.
-            if (!this.celexDoc in this.Config.dontIgnore) {
+            if (!(this.celexDoc.celexID in this.Config.dontIgnore)) {
                 console.log(`Short list of varieties. Check whether it's a correction.`);
                 process.exit(1);
             }
@@ -87,7 +87,6 @@ export default class Storage {
 
     findCountry(txt) {
         let countryKey =  undefined;
-     
         // could be CN code or, on older files, code for country;
         if (txt.length == 2) {
             let iText = this.Config.countries.map(i=> i[0]).indexOf(txt);
@@ -101,23 +100,25 @@ export default class Storage {
             }
             if (iText != -1) {
                 countryKey = this.Config.countries[iText][2];
+            } else if (/^[A-Z]+$/.test(txt)) {
+                console.log(`Fatal Error: possible 2 letter country code ${txt} missed`);
+                process.exit(1);
             }       
-
-            // else
-            // unknown 2 letter code ignore                        
-            // will fail; 
+            // else unknown two char string ignored
         }
         else if (txt.length == 3) {
             let iText = this.Config.countries.map(i=> i[1]).indexOf(txt);
             if (iText != -1) {
                 countryKey = this.Config.countries[iText][2];
-            } else {
-                if (txt == "MGB") {
+            } else if (txt == "MGB") {
                     // special case the Maghreb agreement covers Algeria, 
                     // Morocco & Tunisia
                     countryKey = txt;
-                }
-            }
+            } else if (/^[0-9]+$/.test(txt)) {
+                console.log(`Fatal Error: possible 3 digit country code ${txt} missed.`);
+                process.exit(1);
+            } 
+            // else unonown three char string ignored 
         }
         return countryKey;
     }
@@ -130,12 +131,11 @@ export default class Storage {
     }
 
     registerVariety (variety) {
-
         if (!this.celexDoc.varieties.hasOwnProperty(variety)) {
             this.celexDoc.varieties[variety] = {};
             return this.celexDoc.varieties[variety];
         }
-        console.log(`attempting to create duplicate variety record for` 
+        console.log(`attempting to create duplicate variety record for ` +
             `${variety} in CELEX:${this.celexDoc.celexID}`);
         
     }

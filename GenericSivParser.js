@@ -28,12 +28,15 @@ export default class GenericSivParser {
         const keys = [key].flat();
         keys.forEach((k) => {
             if (k in sivRecord) {
-                console.log(`Fatal error: duplicate country code in siv record: ${k}`)
-                process.exit();            
+                if (this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry) {
+                    // use the lower price
+                    value = Math.min(value,sivRecord[key]);
+                } else {
+                    console.log(`Fatal error: duplicate country code in siv record: ${k}`);
+                    process.exit();  
+                }         
             }
-            else {
-                sivRecord[key] = value;
-            } 
+            sivRecord[key] = value;
         });
     }
 

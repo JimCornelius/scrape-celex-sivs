@@ -247,6 +247,7 @@
     ["QY","978","Countries and territories not specified for commercial or military reasons in the framework of intra-Community trade","Optional heading"],
     ["QZ","979","Countries and territories not specified for commercial or military reasons in the framework of trade with third countries","Optional heading"],
     ["¿1","MGB","Algeria","Morocco","Tunisia","Countires party to the Mahgreb Agreement"],
-    ["¿2","994","Unrecognised country code 994","this code, 994 has no known country associated with it, Possibly a transcription error."],
+    ["¿2","990","Unrecognised country code 990","this code, 990 has no known country associated with it, Possibly a transcription error."],
+    ["¿3","994","Unrecognised country code 994","this code, 994 has no known country associated with it, Possibly a transcription error."],
     ["YU","048",["Slovenia","Croatia","Bosnia and Herzegovina","Kosovo","Serbia","Montenegro","Macedonia"], "Yugosalvia upto 1992"]
 ]

@@ -16,6 +16,20 @@ export default class Config {
         sessionID: "qid=1563402353675", 
         searchTerm: 'text="establishing+the+standard+import+values"'
     };
+
+    static ignoreVariertyDefinition = {
+        "08052070.08052090" : "ignore this, part of a variety defintion on a separate line"
+    };
+
+    static transcriptionErrors =  {
+        "08089100": "07099100",
+        "07071000": "07091000",
+        "08052030.08052050.": "08052030.08052050.08052070.08052090",
+        "07029070":"07020000",
+        "308081020.08081050.08081090": "08081020.08081050.08081090",
+        "07020005": "07070005"
+    };
+    static minVarieties = 5;
     static standardIgnoreMsg =
         "Standard CELEX code but this is a correction"+
         " of earlier SIV. Manual DB correction required.";
@@ -23,11 +37,26 @@ export default class Config {
         "32010R0944": this.standardIgnoreMsg,
         "32008R0468": this.standardIgnoreMsg,
         "32005R2002": this.standardIgnoreMsg,
-        "32005R1179": this.standardIgnoreMsg
+        "32005R1179": this.standardIgnoreMsg,
+        "32002R0510": this.standardIgnoreMsg,
+        "32001R2427": this.standardIgnoreMsg,
+        "32001R0684": this.standardIgnoreMsg,
+        "32001R1179": "Incorrectly indexed. Lnks to a regulation"+
+            " on butter. Journal listing shows CELEX 32001R1170",
+        "31999R2594": "amended regulation, needs manual interpretation",
+        "31999R1491": this.standardIgnoreMsg,
+        "31998R0674": this.standardIgnoreMsg
     };
     static dontIgnore = {
-        "32003R0779": "Only 5 varieties, but valid"
+        "32000R0404": "Only 1 variety, but valid",
+        "32000R0162": "Only 2 varieties, but valid",
+        "31999R0901": "Only 3 varieties, but valid",
+        "31999R0887": "Only 5 varieties, but valid",
+        "31998R1140": "Only 4 varieties, but valid"
     };
+    static knownDuplicateCountry = {
+        "32001R1366": "Contains duplicate for 999 on 08091000"
+    }
     static eurlex = {
         urlRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:",
         pdfRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:"
