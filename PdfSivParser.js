@@ -59,7 +59,7 @@ export default class PdfSivParser extends GenericSivParser {
                 tagName: el.tagName,
                 className: el.className,
                 innerText: el.innerText,
-                left: parseFloat(el.style.left);
+                left: parseFloat(el.style.left)
             }))
         );
     }
