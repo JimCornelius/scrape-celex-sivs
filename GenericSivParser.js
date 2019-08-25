@@ -5,10 +5,16 @@ export default class GenericSivParser {
     }
              
     static fixUpTextItem(txt) {
+
+        if (txt == "72ß") {
+            var xx = 99;
+        }
         return txt
             .replace(/‘/g, '')
             .replace(/\s/g, '')
-            .replace(/,/g, '.'); 
+            .replace(/,/g, '.')
+            .replace(/ß/g, '.9') // known typo
+            ; 
     }
 
     static isKeyText(txt) { 

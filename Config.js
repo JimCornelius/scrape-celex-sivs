@@ -45,7 +45,8 @@ export default class Config {
             " on butter. Journal listing shows CELEX 32001R1170",
         "31999R2594": "amended regulation, needs manual interpretation",
         "31999R1491": this.standardIgnoreMsg,
-        "31998R0674": this.standardIgnoreMsg
+        "31998R0674": this.standardIgnoreMsg,
+        "31997R1896": this.standardIgnoreMsg
     };
     static dontIgnore = {
         "32000R0404": "Only 1 variety, but valid",
@@ -55,8 +56,9 @@ export default class Config {
         "31998R1140": "Only 4 varieties, but valid"
     };
     static knownDuplicateCountry = {
-        "32001R1366": "Contains duplicate for 999 on 08091000"
-    }
+        "32001R1366": "Contains duplicate for 999 on 08091000",
+        "31997R1887": "Contains duplicate for 058 on 08081092.08081094.08081098"
+    };
     static eurlex = {
         urlRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:",
         pdfRoot: "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:"
