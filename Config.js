@@ -29,7 +29,7 @@ export default class Config {
         "308081020.08081050.08081090": "08081020.08081050.08081090",
         "07020005": "07070005"
     };
-    static minVarieties = 5;
+    static minVarieties = 4;
     static standardIgnoreMsg =
         "Standard CELEX code but this is a correction"+
         " of earlier SIV. Manual DB correction required.";
@@ -53,7 +53,10 @@ export default class Config {
         "32000R0162": "Only 2 varieties, but valid",
         "31999R0901": "Only 3 varieties, but valid",
         "31999R0887": "Only 5 varieties, but valid",
-        "31998R1140": "Only 4 varieties, but valid"
+        "31998R1140": "Only 4 varieties, but valid",
+        "31997R1142": "Only 4 varieties, but valid",
+        "31997R1135": "Only 4 varieties, but valid",
+        "31997R1128": "Only 4 varieties, but valid"     
     };
     static knownDuplicateCountry = {
         "32001R1366": "Contains duplicate for 999 on 08091000",

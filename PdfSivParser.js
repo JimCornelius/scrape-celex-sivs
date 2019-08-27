@@ -37,6 +37,7 @@ export default class PdfSivParser extends GenericSivParser {
         
         var pdfViewer = new pdfjsViewer.PDFViewer({
             container: document.getElementById('viewerContainer'),
+            textLayerFactory: new pdfjsViewer.DefaultTextLayerFactory(),
         });
         
         let loadingTask = pdfjsLib.getDocument({url: url});
@@ -52,16 +53,59 @@ export default class PdfSivParser extends GenericSivParser {
         });
     }
 
+    preParse(rawElements) {
+        // bunch up items that are within a space of each other
+        let elements = [];
+        let previous = undefined;
+        let smallGap = 1.2; //
+        let biggerGap = 7.2; // this should be good enough for our needs
+        rawElements.forEach(el => {
+            if ( previous &&
+                (el.top < ((previous.top + previous.bottom)/2)) &&
+                (el.left < (previous.right +smallGap))
+            ) {
+                elements[elements.length-1].innerText+=el.innerText;
+                elements[elements.length-1].right = el.right;
+            } else if ( previous &&
+                (el.top < ((previous.top + previous.bottom)/2)) &&
+                (el.left < (previous.right +biggerGap))
+            ) {
+                elements[elements.length-1].innerText+=(" "+el.innerText);
+                elements[elements.length-1].right = el.right;
+            } else {
+                elements.push({
+                    innerText: el.innerText,
+                    top: el.top,
+                    left: el.left,
+                    bottom: el.bottom,
+                    right: el.right
+                });
+            }
+            previous = el;
+        });
+        return elements;
+    }
+
     async getElements (page) {
         const selector = ".textLayer>span";
-        return await page.$$eval(selector, elements =>
-            elements.map(el => ({
-                tagName: el.tagName,
-                className: el.className,
-                innerText: el.innerText,
-                left: parseFloat(el.style.left)
-            }))
+        var elements = await page.$$eval(selector, elements =>
+            elements.map(el => {
+
+                let rect = el.getBoundingClientRect();
+
+                return {
+                    tagName: el.tagName,
+                    className: el.className,
+                    innerText: el.innerText,
+                    top: rect.top,
+                    left: rect.left,
+                    bottom: rect.bottom,
+                    right: rect.right
+                }
+            })
         );
+
+        return this.preParse(elements);
     }
 
     async parsePdf(celexDoc, page) {
@@ -82,12 +126,15 @@ export default class PdfSivParser extends GenericSivParser {
             var viewer = document.createElement("div");
             document.body.appendChild(pdfContainer);
             pdfContainer.appendChild(viewer);
+        pdfContainer.style = "overflow: auto;position: absolute;width: 100%;height: 100%"
             pdfContainer.id = "viewerContainer";
+
             viewer.id = "viewer";
             viewer.className = "pdfViewer";
         });
 
         // inject some code into the webpage to help us out with PDFs
+        await page.addStyleTag({ url: "https://unpkg.com/pdfjs-dist@2.2.228/web//pdf_viewer.css" });
         await page.addScriptTag({ url: "https://unpkg.com/pdfjs-dist@2.2.228/build/pdf.js" });
         await page.waitForFunction("pdfjsLib != undefined");
 
@@ -108,7 +155,6 @@ export default class PdfSivParser extends GenericSivParser {
             this.emitter.on("done",resolve);
         });
     }
-    
 
     // todo: need to split this funcion nesting getting silly.
     async parsePdfTags() {
@@ -122,17 +168,9 @@ export default class PdfSivParser extends GenericSivParser {
             let sivRecord; 
             let country = undefined;
             let topFound = false;
-            let bottomFound = false;
             let partialVariety = "";
-            let partialDate = "";
-            let cnCodeLeft = "";
-            let lastTxt = undefined;
-            let varietyLeft = undefined;
-            var possibleDate = [];
-            let nPos = -1;
-            let lastItem = undefined; 
+        
             for (let item of elements) {
-                nPos++;
                 const txt = GenericSivParser.fixUpTextItem(item.innerText);
                 if (txt=="nomenclature") {
                     // done
@@ -141,32 +179,12 @@ export default class PdfSivParser extends GenericSivParser {
                     // ignore everything till we have the date
                     if (!date) {
                         date = this.checkForPdfDate(txt);
-                        if (!date) {
-                            date = this.checkForPdfDate(partialDate+txt);
-                        }    
-                        if (date) {
-                            this.celexDoc.dateInJournal = date;
-                        } else {
-                            partialDate+=txt;
-                            if (!(/^[.0-9]+$/.test(txt))) {
-                                partialDate = "";
-                            }
-                        }
                     }
                     else {
                         // ignore everything till we're at the top of the SIV list
                     if (!topFound) {
-                            topFound = (
-                                (0 == txt.localeCompare('CNcode',
-                                    undefined, { sensitivity: 'base' }))  ||
-                                (0 == (lastTxt+txt).localeCompare('Ncode',
-                                    undefined, { sensitivity: 'base' }))  ||
-                                (0 == (lastTxt+txt).localeCompare('CNcode',
-                                    undefined, { sensitivity: 'base' }))     
-                            );
-                            if (!topFound) {
-                                cnCodeLeft = item.left;
-                            }
+                            topFound = (0 == txt.localeCompare('CNcode',
+                                    undefined, { sensitivity: 'base' }));
                         } else {
                             if (lookingForValue) {
                                 if (!isNaN(txt)) {
@@ -178,9 +196,7 @@ export default class PdfSivParser extends GenericSivParser {
                             } else {
                                 if (sivRecord && country == undefined) {
                                     // will always be looking for the variety as well
-                                    if (item.left > (cnCodeLeft+140)) {
-                                        country = this.storage.findCountry(partialVariety+txt);
-                                    }
+                                    country = this.storage.findCountry(partialVariety+txt);
                                     if (country) {
                                         partialVariety = "";
                                         if([country].flat().some(i => sivRecord.hasOwnProperty(i))) {
@@ -249,9 +265,7 @@ export default class PdfSivParser extends GenericSivParser {
                             }
                         }
                     }
-                    lastTxt = txt;
                 }
-                lastItem = item;
             } //end for
             if (!date) {
                 // fatal error unable to confirm the date for this CELEX
@@ -264,7 +278,7 @@ export default class PdfSivParser extends GenericSivParser {
         }
         await this.storage.completeParseCelex();
     }
-    
+
     checkForPdfDate(txt) {
         // look for date in format XX.XX.XXXX; X.XX.XXXX; XX.X.XXXX
         let trio = txt.split(".").map(d => d.trim());
