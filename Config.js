@@ -19,6 +19,7 @@ export default class Config {
       searchTerm: 'text="establishing+the+standard+import+values"',
     };
 
+    // todo: this could possibly be removed now due to enhanced pre-parsing
     static ignoreVariertyDefinition = {
       '08052070.08052090': 'ignore this, part of a variety defintion on a separate line',
     };
@@ -52,6 +53,7 @@ export default class Config {
       '31999R1491': this.standardIgnoreMsg,
       '31998R0674': this.standardIgnoreMsg,
       '31997R1896': this.standardIgnoreMsg,
+      '31997R0944': this.standardIgnoreMsg,
     };
 
     static dontIgnore = {

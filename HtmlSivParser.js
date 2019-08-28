@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import GenericSivParser from './GenericSivParser.js';
 
 // HtmlSivParser --
@@ -20,7 +19,6 @@ export default class HtmlSivParser extends GenericSivParser {
 
   static async parseHTMLDate(page) {
     return page.evaluate(() => {
-      // eslint-disable-next-line no-undef
       const dateNode = document.querySelector('.hd-date');
       if (dateNode) {
         return dateNode.innerText.replace(/\s/g, '').replace(/\./g, '/');
@@ -41,8 +39,8 @@ export default class HtmlSivParser extends GenericSivParser {
       newVariety: false,
     };
     let sivRecord;
-    // eslint-disable-next-line no-restricted-syntax
-    for (const element of theElements) {
+
+    theElements.forEach((element) => {
       this.processKeyAndValues(element, entry);
       if (entry.newVariety) {
         entry.variety = this.varietyFromItemText(element.innerText);
@@ -81,7 +79,6 @@ export default class HtmlSivParser extends GenericSivParser {
             console.log(`Fatal Error. Country ${entry.rawKey}, before variety known.`);
             process.exit(1);
           }
-          // eslint-disable-next-line no-loop-func
           if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
             console.log(`Fatal Error. Already have an entry for ${entry.variety} : ${country}`);
             process.exit(1);
@@ -94,7 +91,8 @@ export default class HtmlSivParser extends GenericSivParser {
         console.log('Fatal Error. Unknown cause');
         process.exit(1);
       }
-    }
+    });
+
     await this.storage.completeParseCelex();
   }
 

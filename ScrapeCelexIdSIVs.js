@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import puppeteer from 'puppeteer';
 
 import Config from './Config.js';

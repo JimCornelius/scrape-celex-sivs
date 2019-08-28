@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // GenericSivParser --
 export default class GenericSivParser {
 //   constructor() {
@@ -40,7 +39,6 @@ export default class GenericSivParser {
           process.exit();
         }
       }
-      // eslint-disable-next-line no-param-reassign
       sivRecord[key] = newValue;
     });
   }
@@ -48,7 +46,6 @@ export default class GenericSivParser {
   storeRecord(celexDoc, variety, sivRecord) {
     // ensure this variety doesn't already exist in
     // this.celexDoc.varieties object
-    // eslint-disable-next-line no-prototype-builtins
     if (!celexDoc.varieties.hasOwnProperty(variety)) {
       celexDoc.varieties[variety] = sivRecord;
     } else {

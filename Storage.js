@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import mongodb from 'mongodb';
 
 export default class Storage {
@@ -58,8 +57,8 @@ export default class Storage {
   }
 
   incrementParsedCount() {
-    // eslint-disable-next-line no-plusplus
-    return ++this.parsedCount;
+    this.parsedCount += 1;
+    return this.parsedCount;
   }
 
   async checkDocExists(celexID) {
