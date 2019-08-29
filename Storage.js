@@ -90,21 +90,23 @@ export default class Storage {
     let countryKey;
     // could be CN code or, on older files, code for country;
     if (txt.length === 2) {
-      let iText = this.Config.countries.map((i) => i[0]).indexOf(txt);
+      if (!(txt in this.Config.ignoreCountry)) {
+        let iText = this.Config.countries.map((i) => i[0]).indexOf(txt);
 
-      if (iText === -1) {
-        // special case might be using the Greek Alphabet
-        // could be some others?
-        const newTxt = txt.replace(String.fromCharCode(924), 'M')
-          .replace(String.fromCharCode(922), 'K');
+        if (iText === -1) {
+          // special case might be using the Greek Alphabet
+          // could be some others?
+          const newTxt = txt.replace(String.fromCharCode(924), 'M')
+            .replace(String.fromCharCode(922), 'K');
 
-        iText = this.Config.countries.map((i) => i[0]).indexOf(newTxt);
-      }
-      if (iText !== -1) {
-        countryKey = this.Config.countries[iText][index2];
-      } else if (/^[A-Z]+$/.test(txt)) {
-        console.log(`Fatal Error: possible 2 letter country code ${txt} missed`);
-        process.exit(1);
+          iText = this.Config.countries.map((i) => i[0]).indexOf(newTxt);
+        }
+        if (iText !== -1) {
+          countryKey = this.Config.countries[iText][index2];
+        } else if (/^[A-Z]+$/.test(txt)) {
+          console.log(`Fatal Error: possible 2 letter country code ${txt} missed`);
+          process.exit(1);
+        }
       }
       // else unknown two char string ignored
     } else if (txt.length === 3) {

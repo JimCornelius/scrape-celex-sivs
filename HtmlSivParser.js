@@ -43,11 +43,11 @@ export default class HtmlSivParser extends GenericSivParser {
     theElements.forEach((element) => {
       this.processKeyAndValues(element, entry);
       if (entry.newVariety) {
-        entry.variety = this.varietyFromItemText(element.innerText);
+        entry.variety = this.varietyFromText(element.innerText);
         if (entry.variety === undefined) {
           const txt = GenericSivParser.fixUpTextItem(element.innerText);
           if (txt in this.storage.Config.transcriptionErrors) {
-            entry.variety = this.varietyFromItemText(this.storage.Config.transcriptionErrors[txt]);
+            entry.variety = this.varietyFromText(this.storage.Config.transcriptionErrors[txt]);
           } else {
             console.log(`Fatal Error. Unknown variety code: ${element.innerText}`);
             process.exit();
@@ -80,7 +80,7 @@ export default class HtmlSivParser extends GenericSivParser {
             process.exit(1);
           }
           if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
-            console.log(`Fatal Error. Already have an entry for ${entry.variety} : ${country}`);
+            console.log(`Fatal Error.  for ${entry.variety} : ${country}`);
             process.exit(1);
           }
           entry.key = country;

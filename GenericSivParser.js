@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 // GenericSivParser --
 export default class GenericSivParser {
 //   constructor() {
@@ -7,9 +8,11 @@ export default class GenericSivParser {
   static fixUpTextItem(txt) {
     return txt
       .replace(/‘/g, '')
+      .replace(/‘/g, '')
       .replace(/\s/g, '')
       .replace(/,/g, '.')
-      .replace(/ß/g, '.9'); // known typo
+      .replace(/ß/g, '.9') // known typo
+      .replace(/[^\x00-\x7F]/g, ''); // extraneous characters
   }
 
   static isKeyText(txt) {
@@ -17,7 +20,7 @@ export default class GenericSivParser {
     return (txt.length === 2 || txt.length === 3);
   }
 
-  varietyFromItemText(textItem) {
+  varietyFromText(textItem) {
     const txt = GenericSivParser.fixUpTextItem(textItem);
     // if two or three characters it's a country code. Not interested
     if (txt.length !== 2 && txt.length !== 3) {
@@ -49,7 +52,7 @@ export default class GenericSivParser {
     if (!celexDoc.varieties.hasOwnProperty(variety)) {
       celexDoc.varieties[variety] = sivRecord;
     } else {
-      console.log(`Already have report for ${variety} for CELEX ${this.celexDoc.celexID}`);
+      console.log(`Faltal error. Already have report for ${variety} for CELEX ${this.celexDoc.celexID}`);
     }
   }
 }

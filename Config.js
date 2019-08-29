@@ -31,6 +31,7 @@ export default class Config {
       '07029070': '07020000',
       '308081020.08081050.08081090': '08081020.08081050.08081090',
       '07020005': '07070005',
+      '8052011': '08052011',
     };
 
     static minVarieties = 4;
@@ -54,6 +55,8 @@ export default class Config {
       '31998R0674': this.standardIgnoreMsg,
       '31997R1896': this.standardIgnoreMsg,
       '31997R0944': this.standardIgnoreMsg,
+      '31997R0348': 'written in columns, need\'s special parsing',
+      '31997R0276': 'bad formatting, need\'s special parsing',
     };
 
     static dontIgnore = {
@@ -66,6 +69,10 @@ export default class Config {
       '31997R1135': 'Only 4 varieties, but valid',
       '31997R1128': 'Only 4 varieties, but valid',
     };
+
+    static ignoreCountry = {
+      II: 'Known hidden characters',
+    }
 
     static knownDuplicateCountry = {
       '32001R1366': 'Contains duplicate for 999 on 08091000',

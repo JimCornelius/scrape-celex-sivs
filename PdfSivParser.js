@@ -158,6 +158,7 @@ export default class PdfSivParser extends GenericSivParser {
   }
 
   async parsePdfTags() {
+    const largeGap = 20;
     const elements = await PdfSivParser.getSpanElements(this.page);
 
     let date;
@@ -167,9 +168,17 @@ export default class PdfSivParser extends GenericSivParser {
     let country;
     let topFound = false;
     let partialVariety = '';
+    let lastItem;
+    let currentVariety;
 
     try {
       elements.forEach((item) => {
+        if (
+          lastItem
+          && ((lastItem.right + largeGap) < item.left)
+        ) {
+          partialVariety = '';
+        }
         const txt = GenericSivParser.fixUpTextItem(item.innerText);
         const posVariety = partialVariety + txt;
         if (!txt.includes('nomenclature')) {
@@ -192,7 +201,7 @@ export default class PdfSivParser extends GenericSivParser {
                 partialVariety = '';
                 if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
                   if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
-                    console.log(`Already have an entry for ${sivRecord.variety} : ${country}`);
+                    console.log(`Fatal error. Already have an entry for ${currentVariety} : ${country}`);
                     process.exit(1);
                   }
                 }
@@ -200,10 +209,7 @@ export default class PdfSivParser extends GenericSivParser {
               }
             }
             if (lookingForVariety && !country) {
-              let variety = this.varietyFromText(txt);
-              if (!variety) {
-                variety = this.varietyFromText(posVariety);
-              }
+              let variety = this.varietyFromText(txt) || this.varietyFromText(posVariety);
               if (variety) {
                 partialVariety = '';
                 if (this.storage.Config.selectedVarieties.includes(variety)) {
@@ -213,10 +219,9 @@ export default class PdfSivParser extends GenericSivParser {
                     console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
                     process.exit(1);
                   }
+                  currentVariety = variety;
                   lookingForVariety = false;
                   country = undefined;
-                } else {
-                  // ignoring non selected varieties
                 }
               } else if ((posVariety) in this.storage.Config.transcriptionErrors) {
                 variety = this.varietyFromText(this.storage.Config.transcriptionErrors[posVariety]);
@@ -231,13 +236,11 @@ export default class PdfSivParser extends GenericSivParser {
               } else if (PdfSivParser.checkForPdfDate(txt)) {
                 // ignore, it's just a date
               } else if (/^[. 0-9]*$/.test(posVariety)) {
-                // it could be that this is the first part of a variety split
-                // into separate spans
-                // test if it's a substring of a known variety
-                if (Object.values(this.storage.CNs).flat()
-                  .some((i) => i.includes(posVariety))) {
-                  partialVariety += txt;
-                } else if ((posVariety).length > 3) {
+                // it could be that this is the first part of a variety split into
+                // separate spans test if it's a substring of a known variety
+                if (Object.values(this.storage.CNs).flat().some((i) => i.includes(posVariety))) {
+                  partialVariety = posVariety;
+                } else if (posVariety.length > 3) {
                   console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
                   process.exit(1);
                 }
@@ -245,6 +248,7 @@ export default class PdfSivParser extends GenericSivParser {
             }
           }
         }
+        lastItem = item;
       });
     } catch (err) {
       console.log(`Caught exception${err.stack}`);
@@ -255,6 +259,7 @@ export default class PdfSivParser extends GenericSivParser {
       console.log('Fatal error: can\'t confirm date of PDF');
       process.exit(1);
     }
+    await this.storage.completeParseCelex();
   }
 
   static checkForPdfDate(txt) {

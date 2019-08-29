@@ -17,6 +17,7 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    "quote-props": "off",
     "no-console": "off",
     "no-prototype-builtins": "off",
     "no-param-reassign": ["error", { "props": false }],
