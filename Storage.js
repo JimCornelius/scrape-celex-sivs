@@ -113,6 +113,9 @@ export default class Storage {
         // special case the Maghreb agreement covers Algeria,
         // Morocco & Tunisia
         countryKey = txt;
+      } else if (txt === '036') {
+        // known transcription error
+        countryKey = '039';
       } else if (/^[0-9]+$/.test(txt)) {
         console.log(`Fatal Error: possible 3 digit country code ${txt} missed.`);
         process.exit(1);
@@ -129,6 +132,14 @@ export default class Storage {
     return this.newCelexDoc(await this.cursor.next());
   }
 
+  getVarietySiv(variety) {
+    let retVal;
+    if (this.celexDoc.varieties.hasOwnProperty(variety)) {
+      retVal = this.celexDoc.varieties[variety];
+    }
+    return retVal;
+  }
+
   registerVariety(variety) {
     if (!this.celexDoc.varieties.hasOwnProperty(variety)) {
       this.celexDoc.varieties[variety] = {};
@@ -140,13 +151,17 @@ export default class Storage {
   }
 
   newCelexDoc(currentCelex) {
-    this.celexDoc = {
-      celexID: currentCelex.celexID,
-      dateOfDoc: currentCelex.date,
-      dateInJournal: undefined,
-      varieties: {
-      },
-    };
+    if (currentCelex !== null) {
+      this.celexDoc = {
+        celexID: currentCelex.celexID,
+        dateOfDoc: currentCelex.date,
+        dateInJournal: undefined,
+        varieties: {
+        },
+      };
+    } else {
+      this.celexDoc = undefined;
+    }
     return this.celexDoc;
   }
 

@@ -101,7 +101,7 @@ export default class PdfSivParser extends GenericSivParser {
 
     let columnCount = 0;
 
-    // known transcription error
+    // known OCR transcription errors
     elements.forEach((el) => {
       const txt = el.innerText
         .replace('\'ECU', '(EUR')
@@ -109,7 +109,9 @@ export default class PdfSivParser extends GenericSivParser {
         .replace('ECU', 'EUR')
         .replace('WO', '100')
         .replace('f', '(')
-        .replace('FC11', 'EUR');
+        .replace('FC11', 'EUR')
+        .replace('100kg', '100kg)')
+        .replace('))', ')');
 
       if (txt === '(EUR/100kg)') {
         columnCount += 1;
@@ -254,8 +256,12 @@ export default class PdfSivParser extends GenericSivParser {
                   // new variety, register it
                   sivRecord = this.storage.registerVariety(variety);
                   if (sivRecord === undefined) {
-                    console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
-                    process.exit(1);
+                    if (this.celexDoc.celexID in this.storage.Config.multiVarietyDefs) {
+                      sivRecord = this.storage.getVarietySiv(variety);
+                    } else {
+                      console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
+                      process.exit(1);
+                    }
                   }
                   currentVariety = variety;
                   lookingForVariety = false;

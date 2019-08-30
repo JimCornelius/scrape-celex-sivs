@@ -2,7 +2,7 @@ import cnCodes from './data/cnCodes.json';
 import countries from './data/countries.json';
 
 export default class Config {
-    static startPos = 0;
+    static startPos = 5500;
 
     static puppeteerConfig = { headless: true };
 
@@ -32,9 +32,14 @@ export default class Config {
       '308081020.08081050.08081090': '08081020.08081050.08081090',
       '07020005': '07070005',
       '8052011': '08052011',
+      ')92041.08092049': '08092041.08092049',
+      '193031.08093039': '08093031.08093039',
+      '0702015': '07020015',
+      '0707001.0': '07070010',
+      '07099073.': '07099073',
     };
 
-    static minVarieties = 4;
+    static minVarieties = 3;
 
     static standardIgnoreMsg =
         'Standard CELEX code but this is a correction'
@@ -61,20 +66,38 @@ export default class Config {
       '31996R1660': this.standardIgnoreMsg,
       '31996R1659': this.standardIgnoreMsg,
       '31996R1342': this.standardIgnoreMsg,
-      '31996D0338': 'Irrelevent document',
+      '31996D0338': 'Irrelevent document', // should really have been filtered out already
       '31996R0808': this.standardIgnoreMsg,
       '31996R0710': 'Contains no SIVs',
+      '31995R1400': 'written in columns, needs special parsing',
+      '31995R1045': 'written in columns, needs special parsing',
+      '31995R1036': 'written in columns, needs special parsing',
+      '31995R0788': 'bad formatting, needs special parsing',
+      '31995R0078': 'written in columns, needs special parsing',
     };
 
     static dontIgnore = {
       '32000R0404': 'Only 1 variety, but valid',
       '32000R0162': 'Only 2 varieties, but valid',
-      '31999R0901': 'Only 3 varieties, but valid',
-      '31999R0887': 'Only 5 varieties, but valid',
-      '31998R1140': 'Only 4 varieties, but valid',
-      '31997R1142': 'Only 4 varieties, but valid',
-      '31997R1135': 'Only 4 varieties, but valid',
-      '31997R1128': 'Only 4 varieties, but valid',
+      '31995R0030': 'Only 2 varieties, but valid',
+      '31995R0027': 'Only 2 varieties, but valid',
+      '31995R0026': 'Only 2 varieties, but valid',
+      '31995R0015': 'Only 2 varieties, but valid',
+      '31995R0005': 'Only 2 varieties, but valid',
+      '31995R0004': 'Only 2 varieties, but valid',
+    };
+
+    static multiVarietyDefs = {
+      '31995R0063': '',
+      '31995R0055': '',
+      '31995R0045': '',
+      '31995R0039': '',
+      '31995R0030': '',
+      '31995R0027': '',
+      '31995R0026': '',
+      '31995R0015': '',
+      '31995R0005': '',
+      '31995R0004': '',
     };
 
     static filterOut = {
