@@ -57,6 +57,13 @@ export default class Config {
       '31997R0944': this.standardIgnoreMsg,
       '31997R0348': 'written in columns, need\'s special parsing',
       '31997R0276': 'bad formatting, need\'s special parsing',
+      '31997R0138': 'bad formatting, need\'s special parsing',
+      '31996R1660': this.standardIgnoreMsg,
+      '31996R1659': this.standardIgnoreMsg,
+      '31996R1342': this.standardIgnoreMsg,
+      '31996D0338': 'Irrelevent document',
+      '31996R0808': this.standardIgnoreMsg,
+      '31996R0710': 'Contains no SIVs',
     };
 
     static dontIgnore = {
@@ -70,9 +77,11 @@ export default class Config {
       '31997R1128': 'Only 4 varieties, but valid',
     };
 
-    static ignoreCountry = {
-      II: 'Known hidden characters',
-    }
+    static filterOut = {
+      'I': 'Known isolated character that block correct parsing',
+      'II': 'Known characters that block correct parsing',
+      'l': 'Known isolated character that block correct parsing',
+    };
 
     static knownDuplicateCountry = {
       '32001R1366': 'Contains duplicate for 999 on 08091000',

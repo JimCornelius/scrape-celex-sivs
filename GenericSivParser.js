@@ -20,8 +20,12 @@ export default class GenericSivParser {
     return (txt.length === 2 || txt.length === 3);
   }
 
+  static trimVarietyCode(textItem) {
+    return GenericSivParser.fixUpTextItem(textItem).replace(/[^0-9.]/g, '');
+  }
+
   varietyFromText(textItem) {
-    const txt = GenericSivParser.fixUpTextItem(textItem);
+    const txt = GenericSivParser.trimVarietyCode(textItem);
     // if two or three characters it's a country code. Not interested
     if (txt.length !== 2 && txt.length !== 3) {
       return this.storage.findVariety(txt);

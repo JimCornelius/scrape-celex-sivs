@@ -85,28 +85,24 @@ export default class Storage {
     return Object.keys(this.CNs)[Object.values(this.CNs).findIndex((x) => x.flat().includes(txt))];
   }
 
-  findCountry(txt) {
+  findCountry(txtIN) {
+    // special case might be using the Greek Alphabet
+    // could be some others?
+    const txt = txtIN
+      .replace(String.fromCharCode(924), 'M')
+      .replace(String.fromCharCode(922), 'K')
+      .replace(/[\W_]+/g, ''); // extraneous characters
+
     const index2 = 2;
     let countryKey;
     // could be CN code or, on older files, code for country;
     if (txt.length === 2) {
-      if (!(txt in this.Config.ignoreCountry)) {
-        let iText = this.Config.countries.map((i) => i[0]).indexOf(txt);
-
-        if (iText === -1) {
-          // special case might be using the Greek Alphabet
-          // could be some others?
-          const newTxt = txt.replace(String.fromCharCode(924), 'M')
-            .replace(String.fromCharCode(922), 'K');
-
-          iText = this.Config.countries.map((i) => i[0]).indexOf(newTxt);
-        }
-        if (iText !== -1) {
-          countryKey = this.Config.countries[iText][index2];
-        } else if (/^[A-Z]+$/.test(txt)) {
-          console.log(`Fatal Error: possible 2 letter country code ${txt} missed`);
-          process.exit(1);
-        }
+      const iText = this.Config.countries.map((i) => i[0]).indexOf(txt);
+      if (iText !== -1) {
+        countryKey = this.Config.countries[iText][index2];
+      } else if (/^[A-Z]+$/.test(txt)) {
+        console.log(`Fatal Error: possible 2 letter country code ${txt} missed`);
+        process.exit(1);
       }
       // else unknown two char string ignored
     } else if (txt.length === 3) {

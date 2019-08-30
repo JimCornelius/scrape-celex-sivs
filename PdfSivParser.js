@@ -30,6 +30,13 @@ export default class PdfSivParser extends GenericSivParser {
         await this.parsePdfTags();
         this.emitter.emit('done');
       }
+
+      // todo: make this do it in intervals
+      // verify complete by disappearance of the element/tag
+      // showing loading icon
+      this.page.evaluate(() => {
+        document.querySelector('#viewerContainer').scrollBy(0, 800);
+      });
     }
   }
 
@@ -54,44 +61,70 @@ export default class PdfSivParser extends GenericSivParser {
     });
   }
 
-  static preParse(rawElements) {
+  preParse(rawElements) {
     // bunch up items that are within a space of each other
     const elements = [];
     let previous;
     const smallGap = 1.2; //
     const biggerGap = 7.2; // this should be good enough for our needs
+
     rawElements.forEach((el) => {
-      if (previous
+      if (!(el.innerText in this.storage.Config.filterOut)) {
+        if (previous
                 && (el.left > (previous.right - smallGap))
                 && (el.left < (previous.right + smallGap))
                 && (el.top < ((previous.top + previous.bottom) / 2))
                 && (el.bottom > ((previous.top + previous.bottom) / 2))
-      ) {
-        elements[elements.length - 1].innerText += el.innerText;
-        elements[elements.length - 1].right = el.right;
-      } else if (previous
-                && (el.left > (previous.right - smallGap))
+        ) {
+          elements[elements.length - 1].innerText += el.innerText;
+          elements[elements.length - 1].right = el.right;
+        } else if (previous
+                && (el.left > (previous.right - biggerGap))
                 && (el.left < (previous.right + biggerGap))
                 && (el.top < ((previous.top + previous.bottom) / 2))
                 && (el.bottom > ((previous.top + previous.bottom) / 2))
-      ) {
-        elements[elements.length - 1].innerText += (` ${el.innerText}`);
-        elements[elements.length - 1].right = el.right;
-      } else {
-        elements.push({
-          innerText: el.innerText,
-          top: el.top,
-          left: el.left,
-          bottom: el.bottom,
-          right: el.right,
-        });
+        ) {
+          elements[elements.length - 1].innerText += (` ${el.innerText}`);
+          elements[elements.length - 1].right = el.right;
+        } else {
+          elements.push({
+            innerText: el.innerText,
+            top: el.top,
+            left: el.left,
+            bottom: el.bottom,
+            right: el.right,
+          });
+        }
+        previous = el;
       }
-      previous = el;
     });
+
+    let columnCount = 0;
+
+    // known transcription error
+    elements.forEach((el) => {
+      const txt = el.innerText
+        .replace('\'ECU', '(EUR')
+        .replace(/[^\w(/)]|_+/g, '')
+        .replace('ECU', 'EUR')
+        .replace('WO', '100')
+        .replace('f', '(')
+        .replace('FC11', 'EUR');
+
+      if (txt === '(EUR/100kg)') {
+        columnCount += 1;
+      }
+    });
+
+    if (columnCount % 2 === 0) {
+      console.log('Column count equals two skip parsing');
+      return undefined;
+    }
+
     return elements;
   }
 
-  static async getSpanElements(page) {
+  async getSpanElements(page) {
     const selector = '.textLayer>span';
     const elements = await page.$$eval(selector, (e) => e.map((el) => {
       const rect = el.getBoundingClientRect();
@@ -106,7 +139,7 @@ export default class PdfSivParser extends GenericSivParser {
       };
     }));
 
-    return PdfSivParser.preParse(elements);
+    return this.preParse(elements);
   }
 
   async parsePdf(celexDoc, page) {
@@ -159,7 +192,11 @@ export default class PdfSivParser extends GenericSivParser {
 
   async parsePdfTags() {
     const largeGap = 20;
-    const elements = await PdfSivParser.getSpanElements(this.page);
+    const elements = await this.getSpanElements(this.page);
+    if (elements === undefined) {
+      console.log(`Skipping ${this.celexDoc.celexID} two column parsing not yet in place`);
+      return;
+    }
 
     let date;
     let lookingForVariety = true;
@@ -188,8 +225,8 @@ export default class PdfSivParser extends GenericSivParser {
           } else if (!topFound) {
             // ignore everything till we're at the top of the SIV list
             topFound = (txt.localeCompare('CNcode', undefined, { sensitivity: 'base' }) === 0);
-          } else if (lookingForValue && !Number.isNaN(txt)) {
-            this.setEntryInRecord(sivRecord, country, txt);
+          } else if (lookingForValue && !(Number.isNaN(Number(txt.replace('-', ''))))) {
+            this.setEntryInRecord(sivRecord, country, txt.replace('-', ''));
             lookingForVariety = true;
             lookingForValue = false;
             country = undefined;
@@ -210,6 +247,7 @@ export default class PdfSivParser extends GenericSivParser {
             }
             if (lookingForVariety && !country) {
               let variety = this.varietyFromText(txt) || this.varietyFromText(posVariety);
+              const trimmedPosVariety = GenericSivParser.trimVarietyCode(posVariety);
               if (variety) {
                 partialVariety = '';
                 if (this.storage.Config.selectedVarieties.includes(variety)) {
@@ -231,19 +269,16 @@ export default class PdfSivParser extends GenericSivParser {
                   lookingForVariety = false;
                   country = undefined;
                 }
-              } else if ((posVariety) in this.storage.Config.ignoreVariertyDefinition) {
+              } else if (posVariety in this.storage.Config.ignoreVariertyDefinition) {
                 partialVariety = '';
               } else if (PdfSivParser.checkForPdfDate(txt)) {
                 // ignore, it's just a date
-              } else if (/^[. 0-9]*$/.test(posVariety)) {
-                // it could be that this is the first part of a variety split into
-                // separate spans test if it's a substring of a known variety
-                if (Object.values(this.storage.CNs).flat().some((i) => i.includes(posVariety))) {
-                  partialVariety = posVariety;
-                } else if (posVariety.length > 3) {
-                  console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
-                  process.exit(1);
-                }
+              } else if (trimmedPosVariety.length && Object.values(this.storage.CNs).flat()
+                .some((i) => i.includes(trimmedPosVariety))) {
+                partialVariety = trimmedPosVariety;
+              } else if ((posVariety.length > 3) && (/^[. 0-9]*$/.test(posVariety))) {
+                console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
+                process.exit(1);
               }
             }
           }
