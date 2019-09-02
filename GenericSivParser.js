@@ -1,17 +1,13 @@
 /* eslint-disable no-control-regex */
 // GenericSivParser --
 export default class GenericSivParser {
-//   constructor() {
-//     // don't overuse constructor, save for initiate function
-//     }
-
   static fixUpTextItem(txt) {
     return txt
-      .replace(/‘/g, '')
       .replace(/‘/g, '')
       .replace(/\s/g, '')
       .replace(/,/g, '.')
       .replace(/ß/g, '.9') // known typo
+      .replace(/-/g, '') // known typo
       .replace(/[^\x00-\x7F]/g, ''); // extraneous characters
   }
 

@@ -33,7 +33,7 @@ class CelexSivScraper {
     console.log('Launching puppeteer...');
     this.browser = await puppeteer.launch(Config.puppeteerConfig);
     [this.page] = await this.browser.pages();
-    await this.pdfSivParser.exposeFunc(this.page);
+    await this.pdfSivParser.exposeHelperFuncs(this.page);
     await this.page.setViewport({ width: 1280, height: 800 });
     this.iterateThroughPages(await this.storage.nextCelexDoc(true));
   }
@@ -44,8 +44,7 @@ class CelexSivScraper {
                 + ` Reason: ${Config.ignore[celexDoc.celexID]}`);
     } else {
       const date = await HtmlSivParser.parseHTMLDate(this.page);
-      if (!date) {
-        // parse PDF which is completed asynchronously
+      if (date === undefined) {
         await this.pdfSivParser.parsePdf(celexDoc, this.page);
       } else {
         await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
@@ -65,16 +64,17 @@ class CelexSivScraper {
         + ` Reason: ${Config.ignore[celexDoc.celexID]}`);
       } else if (!await this.storage.checkDocExists(celexDoc.celexID)) {
         try {
-          console.log(`Processing ${celexDoc.celexID}`);
+          console.log(`${this.storage.parsedCount} : Processing ${celexDoc.celexID}`);
           await this.gotoPage(celexDoc.celexID);
           await this.scrapeCelex(celexDoc);
         } catch (err) {
           console.log(`Caught Exception ${err.stack}`);
         }
       } else {
-        console.log(`Document for celex ${celexDoc.celexID} already exists`);
+        console.log(
+          `${this.storage.parsedCount} : Document for celex ${celexDoc.celexID} already exists`,
+        );
       }
-
       this.iterateThroughPages(await this.storage.nextCelexDoc());
     } else {
       this.finishUp();

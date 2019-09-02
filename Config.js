@@ -2,9 +2,9 @@ import cnCodes from './data/cnCodes.json';
 import countries from './data/countries.json';
 
 export default class Config {
-    static startPos = 5500;
+    static startPos = 4930;
 
-    static puppeteerConfig = { headless: true };
+    static puppeteerConfig = { headless: false };
 
     static urlConfig = {
       search: 'https://eur-lex.europa.eu/search.html',
@@ -72,7 +72,7 @@ export default class Config {
       '31995R1400': 'written in columns, needs special parsing',
       '31995R1045': 'written in columns, needs special parsing',
       '31995R1036': 'written in columns, needs special parsing',
-      '31995R0788': 'bad formatting, needs special parsing',
+      // '31995R0788': 'bad formatting, needs special parsing',
       '31995R0078': 'written in columns, needs special parsing',
     };
 

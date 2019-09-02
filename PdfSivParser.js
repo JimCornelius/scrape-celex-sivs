@@ -1,8 +1,6 @@
-/* global pdfjsLib, pdfjsViewer */
-
 import EventEmitter from 'events';
 import GenericSivParser from './GenericSivParser.js';
-
+import BrowserContext from './BrowserContext.js';
 
 // GenericSivParser --
 export default class PdfSivParser extends GenericSivParser {
@@ -13,122 +11,173 @@ export default class PdfSivParser extends GenericSivParser {
     this.storage = storage;
   }
 
-  async exposeFunc(page) {
-    // expose a function the can be called in the browser context
-    const boundFunc = this.exposedFunc.bind(this);
-    await page.exposeFunction('exposedFunc', boundFunc);
+  async exposeHelperFuncs(page) {
+    // expose function the can be called in the browser context
+    const onDocEvent = this.onDocEvent.bind(this);
+    await page.exposeFunction('onDocEvent', onDocEvent);
+
+    const { doConsoleLog } = PdfSivParser;
+    await page.exposeFunction('doConsoleLog', doConsoleLog);
   }
 
-  async exposedFunc(event, val) {
+  static doConsoleLog(val) {
+    console.log(val);
+  }
+
+  onDocEvent(event, val) {
+    this.onDocEventAsync(event, val);
+  }
+
+  async onDocEventAsync(event, val) {
     if (event === 'pagecount') {
-      this.unrendered = [...Array(val).keys()].map((x) => x + 1);
+      // this is a custom event, created when the callback of the
+      // loadingTask.promise is called.
+      //
+      // On a large document there will pages where the text layer is not loaded into the DOM.
+      // A <loadingIcon> element will exist in place of the span tags
+      // As each loadingIcon is scrolled into view pdfJSLibe populates the textLayer.
+      // We can then extract the tags to allow the page to be parsed.
+      //
+      // Scrolling a page out of view will remove the spans in the textlayer,
+      // so the tags must be capturesd wthile the page is in view.
+      // The container holds 2 pages at any one time on a normal scaled view.
+      //
+      // Only scroll new Pages into view after current text layer tags are captured
+
+      this.pageTags = new Array(val).fill(null);
     } else if (event === 'textlayerrendered') {
       // text layer for page X is now in the DOM and can be parsed
-      this.unrendered = this.unrendered.filter((i) => i !== val);
-      if (this.unrendered.length === 0) {
-        // now we can actually parse the PDF
-        await this.parsePdfTags();
-        this.emitter.emit('done');
-      }
+      // capture the span tags in the current page
+      this.pageTags[val - 1] = await this.getPageSpanElements(val);
 
-      // todo: make this do it in intervals
-      // verify complete by disappearance of the element/tag
-      // showing loading icon
-      this.page.evaluate(() => {
-        document.querySelector('#viewerContainer').scrollBy(0, 800);
-      });
+      // find the next unrendered page and scroll it into view
+      const nextPage = 1 + this.pageTags.indexOf(null);
+
+      // keep at it while there are pages yet to render
+      if (nextPage) {
+        await this.page.evaluate(BrowserContext.scrollPageIntoView, nextPage);
+      } else {
+        // All pages rendered, we can now parse the whole PDF
+        // emit a message to pass control back to func parsePdf awaiting
+        this.emitter.emit('readyToParse');
+      }
     }
   }
 
-  static loadPdfDoc(url, workerSrc) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-
-    const pdfViewer = new pdfjsViewer.PDFViewer({
-      container: document.getElementById('viewerContainer'),
-      textLayerFactory: new pdfjsViewer.DefaultTextLayerFactory(),
-    });
-
-    const loadingTask = pdfjsLib.getDocument({ url });
-    loadingTask.promise.then((pdfDocument) => {
-      if (pdfDocument.numPages > 5) {
-        // suspiciously high number of pages suggests
-        // this might not be what were' actually want
-        // comment on the CELEX but skip parsing
-      } else {
-        window.exposedFunc('pagecount', pdfDocument.numPages);
-        pdfViewer.setDocument(pdfDocument);
-      }
-    });
-  }
-
-  preParse(rawElements) {
-    // bunch up items that are within a space of each other
+  bunchNeighbours(orderedElements) {
     const elements = [];
-    let previous;
-    const smallGap = 1.2; //
-    const biggerGap = 7.2; // this should be good enough for our needs
+    if (orderedElements) {
+      // bunch up items that are within a space of each other
+      let previous;
 
-    rawElements.forEach((el) => {
-      if (!(el.innerText in this.storage.Config.filterOut)) {
-        if (previous
+      // arbitrary but good enough
+      const smallGap = 1.2; //
+      const biggerGap = 7.2; // this should be good enough for our needs
+
+      orderedElements.forEach((el) => {
+        if (!(el.innerText in this.storage.Config.filterOut)) {
+          if (previous
                 && (el.left > (previous.right - smallGap))
                 && (el.left < (previous.right + smallGap))
                 && (el.top < ((previous.top + previous.bottom) / 2))
                 && (el.bottom > ((previous.top + previous.bottom) / 2))
-        ) {
-          elements[elements.length - 1].innerText += el.innerText;
-          elements[elements.length - 1].right = el.right;
-        } else if (previous
+          ) {
+            elements[elements.length - 1].innerText += el.innerText;
+            elements[elements.length - 1].right = el.right;
+          } else if (previous
                 && (el.left > (previous.right - biggerGap))
                 && (el.left < (previous.right + biggerGap))
                 && (el.top < ((previous.top + previous.bottom) / 2))
                 && (el.bottom > ((previous.top + previous.bottom) / 2))
-        ) {
-          elements[elements.length - 1].innerText += (` ${el.innerText}`);
-          elements[elements.length - 1].right = el.right;
-        } else {
-          elements.push({
-            innerText: el.innerText,
-            top: el.top,
-            left: el.left,
-            bottom: el.bottom,
-            right: el.right,
-          });
+          ) {
+            elements[elements.length - 1].innerText += (` ${el.innerText}`);
+            elements[elements.length - 1].right = el.right;
+          } else {
+            elements.push({
+              innerText: el.innerText,
+              top: el.top,
+              left: el.left,
+              bottom: el.bottom,
+              right: el.right,
+            });
+          }
+          previous = el;
         }
-        previous = el;
+      });
+    }
+    return elements;
+  }
+
+  static fixTranscriptionErrs(elements) {
+    if (elements) {
+      const columnHeaders = [];
+      // known OCR transcription errors
+      elements.forEach((el) => {
+        const txt = el.innerText
+          .replace('\'ECU', '(ECU')
+          .replace(/[^\w(/)]|_+/g, '')
+          .replace('WO', '100')
+          .replace('f', '(')
+          .replace('FC11', 'ECU')
+          .replace('100kg', '100kg)')
+          .replace('))', ')');
+
+        if (txt === '(ECU/100kg)' || txt === '(EUR/100kg)') {
+          el.innerText = txt;
+          columnHeaders.push(el);
+        }
+      });
+
+      if (columnHeaders.length % 2 === 0) {
+        PdfSivParser.deColumnise(elements, columnHeaders);
       }
-    });
-
-    let columnCount = 0;
-
-    // known OCR transcription errors
-    elements.forEach((el) => {
-      const txt = el.innerText
-        .replace('\'ECU', '(EUR')
-        .replace(/[^\w(/)]|_+/g, '')
-        .replace('ECU', 'EUR')
-        .replace('WO', '100')
-        .replace('f', '(')
-        .replace('FC11', 'EUR')
-        .replace('100kg', '100kg)')
-        .replace('))', ')');
-
-      if (txt === '(EUR/100kg)') {
-        columnCount += 1;
-      }
-    });
-
-    if (columnCount % 2 === 0) {
-      console.log('Column count equals two skip parsing');
-      return undefined;
     }
 
     return elements;
   }
 
-  async getSpanElements(page) {
-    const selector = '.textLayer>span';
-    const elements = await page.$$eval(selector, (e) => e.map((el) => {
+  static deColumnise(elements) {
+    // TDB
+    return elements;
+  }
+
+  static rationaliseOrder(elements) {
+    const items = [];
+
+    elements.forEach((el) => {
+      let insert = false;
+      if (items.length) {
+        for (let i = 0; i < items.length; i += 1) {
+          const item = items[i];
+          if (el.top < item.top) {
+            insert = true;
+          } else if (
+            // close to same line
+            (item.left > (el.left - 4))
+            && (item.left < (el.left + 4))
+          ) {
+            if (el.left < item.left) {
+              insert = true;
+              break;
+            }
+          }
+          if (insert) {
+            items.splice(i, 0, el);
+            break;
+          }
+        // in all other circumstances el is after item, so check next item
+        }
+      }
+      if (!insert) {
+        items.push(el);
+      }
+    });
+    return items;
+  }
+
+  async getPageSpanElements(pageNumber) {
+    const selector = `.page[data-page-number="${pageNumber}"] > .textLayer > span`;
+    const elements = await this.page.$$eval(selector, (e) => e.map((el) => {
       const rect = el.getBoundingClientRect();
       return {
         tagName: el.tagName,
@@ -140,34 +189,15 @@ export default class PdfSivParser extends GenericSivParser {
         right: rect.right,
       };
     }));
-
-    return this.preParse(elements);
+    return elements;
   }
 
   async parsePdf(celexDoc, page) {
     this.celexDoc = celexDoc;
     this.page = page;
 
-    await page.evaluate(() => {
-      document.addEventListener('textlayerrendered', (event) => {
-        window.exposedFunc('textlayerrendered', event.detail.pageNumber);
-      });
-      // something in the body of a few pages interferes with
-      // the rendering of the PDFs. Removing the body contents
-      // before injecting the pdfViewer fixes this
-      // It's a sledgehammer to crack a nut though.
-      document.body.innerHTML = '';
-
-      const pdfContainer = document.createElement('div');
-      const viewer = document.createElement('div');
-      document.body.appendChild(pdfContainer);
-      pdfContainer.appendChild(viewer);
-      pdfContainer.style = 'overflow: auto;position: absolute;width: 100%;height: 100%';
-      pdfContainer.id = 'viewerContainer';
-
-      viewer.id = 'viewer';
-      viewer.className = 'pdfViewer';
-    });
+    // inject pdfViewerTags etc
+    await page.evaluate(BrowserContext.injectPdfViewer);
 
     // inject some code into the webpage to help us out with PDFs
     await page.addStyleTag({ url: 'https://unpkg.com/pdfjs-dist@2.2.228/web//pdf_viewer.css' });
@@ -177,40 +207,55 @@ export default class PdfSivParser extends GenericSivParser {
     await page.addScriptTag({ url: 'https://unpkg.com/pdfjs-dist@2.2.228/web/pdf_viewer.js' });
     await page.waitForFunction('pdfjsViewer != undefined');
 
+    // calls loadPdfDoc in the browser context
     await page.evaluate(
-      PdfSivParser.loadPdfDoc,
+      BrowserContext.loadPdfDoc,
       this.storage.Config.eurlex.pdfRoot + celexDoc.celexID,
       this.storage.Config.pdfjs.workerSrc,
     );
-    await this.parsingComplete();
+    // browser has control until ready to parse
+    await this.readyToParse();
+    // wait for parsing to complete and we're done for this page
+    await this.parsePdfTags(this.collectElements());
+    await this.storage.completeParseCelex();
     this.emitter.removeAllListeners();
   }
 
-  async parsingComplete() {
+  async readyToParse() {
     await new Promise((resolve) => {
-      this.emitter.on('done', resolve);
+      this.emitter.on('readyToParse', resolve);
     });
   }
 
-  async parsePdfTags() {
-    const largeGap = 20;
-    const elements = await this.getSpanElements(this.page);
-    if (elements === undefined) {
-      console.log(`Skipping ${this.celexDoc.celexID} two column parsing not yet in place`);
-      return;
-    }
+  collectElements() {
+    // rearrange (potentially) the tags on each page so that they are correctly ordered
+    // bunch up into words and phrases,
+    // sort out columns so we can parse consistently
+    const allElements = [];
+    let xx = 1;
+    this.pageTags.forEach((pageElements) => {
+      console.log(xx);
+      xx += 1;
+      const orderedElements = PdfSivParser.rationaliseOrder(pageElements);
+      const elements = this.bunchNeighbours(orderedElements);
+      const fixedElements = PdfSivParser.fixTranscriptionErrs(elements);
+      allElements.concat(fixedElements);
+    });
+    return allElements;
+  }
 
-    let date;
-    let lookingForVariety = true;
-    let lookingForValue = false;
-    let sivRecord;
-    let country;
-    let topFound = false;
-    let partialVariety = '';
-    let lastItem;
-    let currentVariety;
-
+  parsePdfTags(elements) {
     try {
+      const largeGap = 20;
+      let date;
+      let lookingForVariety = true;
+      let sivRecord;
+      let country;
+      let topFound = false;
+      let partialVariety = '';
+      let lastItem;
+      let currentVariety;
+
       elements.forEach((item) => {
         if (
           lastItem
@@ -227,10 +272,12 @@ export default class PdfSivParser extends GenericSivParser {
           } else if (!topFound) {
             // ignore everything till we're at the top of the SIV list
             topFound = (txt.localeCompare('CNcode', undefined, { sensitivity: 'base' }) === 0);
-          } else if (lookingForValue && !(Number.isNaN(Number(txt.replace('-', ''))))) {
-            this.setEntryInRecord(sivRecord, country, txt.replace('-', ''));
+          } else if (country
+                    && sivRecord
+                    && sivRecord.value !== undefined
+                    && !(Number.isNaN(Number(txt)))) {
+            this.setEntryInRecord(sivRecord, country, txt);
             lookingForVariety = true;
-            lookingForValue = false;
             country = undefined;
           } else {
             if (sivRecord && country === undefined) {
@@ -244,7 +291,6 @@ export default class PdfSivParser extends GenericSivParser {
                     process.exit(1);
                   }
                 }
-                lookingForValue = true;
               }
             }
             if (lookingForVariety && !country) {
@@ -291,16 +337,16 @@ export default class PdfSivParser extends GenericSivParser {
         }
         lastItem = item;
       });
+
+      if (!date) {
+        // fatal error unable to confirm the date for this CELEX
+        console.log('Fatal error: can\'t confirm date of PDF');
+        process.exit(1);
+      }
     } catch (err) {
       console.log(`Caught exception${err.stack}`);
       process.exit(1);
     }
-    if (!date) {
-      // fatal error unable to confirm the date for this CELEX
-      console.log('Fatal error: can\'t confirm date of PDF');
-      process.exit(1);
-    }
-    await this.storage.completeParseCelex();
   }
 
   static checkForPdfDate(txt) {
