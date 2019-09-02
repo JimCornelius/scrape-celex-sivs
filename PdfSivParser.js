@@ -247,7 +247,7 @@ export default class PdfSivParser extends GenericSivParser {
     return allElements;
   }
 
-  parsePdfTags(elements) {
+  async parsePdfTags(elements) {
     if (elements !== undefined) {
       try {
         const largeGap = 20;
@@ -269,77 +269,77 @@ export default class PdfSivParser extends GenericSivParser {
           }
           const txt = GenericSivParser.fixUpTextItem(item.innerText);
           const posVariety = partialVariety + txt;
-          if (!txt.includes('nomenclature')) {
-            if (!date) {
+
+          if (!date) {
             // ignore everything till we have the date
-              date = PdfSivParser.checkForPdfDate(txt);
-            } else if (!topFound) {
+            date = PdfSivParser.checkForPdfDate(txt);
+          } else if (!topFound) {
             // ignore everything till we're at the top of the SIV list
-              topFound = (txt.localeCompare('CNcode', undefined, { sensitivity: 'base' }) === 0);
-            } else if (country
+            topFound = (txt.localeCompare('CNcode', undefined, { sensitivity: 'base' }) === 0);
+          } else if (country
                     && sivRecord
                     && sivRecord.value === undefined
                     && !(Number.isNaN(Number(txt)))) {
-              this.setEntryInRecord(sivRecord, country, txt);
-              lookingForVariety = true;
-              country = undefined;
-            } else {
-              if (sivRecord && country === undefined) {
+            this.setEntryInRecord(sivRecord, country, txt);
+            lookingForVariety = true;
+            country = undefined;
+          } else {
+            if (sivRecord && country === undefined) {
               // will always be looking for the variety as well
-                country = this.storage.findCountry(posVariety);
-                if (country) {
-                  partialVariety = '';
-                  if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
-                    if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
-                      console.log(`Fatal error. Already have an entry for ${currentVariety} : ${country}`);
-                      process.exit(1);
-                    }
+              country = this.storage.findCountry(posVariety);
+              if (country) {
+                partialVariety = '';
+                if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
+                  if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
+                    console.log(`Fatal error. Already have an entry for ${currentVariety} : ${country}`);
+                    process.exit(1);
                   }
-                }
-              }
-              if (lookingForVariety && !country) {
-                let variety = this.varietyFromText(txt) || this.varietyFromText(posVariety);
-                const trimmedPosVariety = GenericSivParser.trimVarietyCode(posVariety);
-                if (variety) {
-                  partialVariety = '';
-                  if (this.storage.Config.selectedVarieties.includes(variety)) {
-                  // new variety, register it
-                    sivRecord = this.storage.registerVariety(variety);
-                    if (sivRecord === undefined) {
-                      if (this.celexDoc.celexID in this.storage.Config.multiVarietyDefs) {
-                        sivRecord = this.storage.getVarietySiv(variety);
-                      } else {
-                        console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
-                        process.exit(1);
-                      }
-                    }
-                    currentVariety = variety;
-                    lookingForVariety = false;
-                    country = undefined;
-                  }
-                } else if ((posVariety) in this.storage.Config.transcriptionErrors) {
-                  variety = this
-                    .varietyFromText(this.storage.Config.transcriptionErrors[posVariety]);
-                  partialVariety = '';
-                  if (this.storage.Config.selectedVarieties.includes(variety)) {
-                    sivRecord = this.storage.registerVariety(variety);
-                    lookingForVariety = false;
-                    country = undefined;
-                  }
-                } else if (posVariety in this.storage.Config.ignoreVariertyDefinition) {
-                  partialVariety = '';
-                } else if (PdfSivParser.checkForPdfDate(txt)) {
-                // ignore, it's just a date
-                } else if (trimmedPosVariety.length && Object.values(this.storage.CNs).flat()
-                  .some((i) => i.includes(trimmedPosVariety))) {
-                  partialVariety = trimmedPosVariety;
-                } else if ((posVariety.length > 3) && (/^[. 0-9]*$/.test(posVariety))) {
-                  console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
-                  process.exit(1);
                 }
               }
             }
+            if (lookingForVariety && !country) {
+              let variety = this.varietyFromText(txt) || this.varietyFromText(posVariety);
+              const trimmedPosVariety = GenericSivParser.trimVarietyCode(posVariety);
+              if (variety) {
+                partialVariety = '';
+                if (this.storage.Config.selectedVarieties.includes(variety)) {
+                  // new variety, register it
+                  sivRecord = this.storage.registerVariety(variety);
+                  if (sivRecord === undefined) {
+                    if (this.celexDoc.celexID in this.storage.Config.multiVarietyDefs) {
+                      sivRecord = this.storage.getVarietySiv(variety);
+                    } else {
+                      console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
+                      process.exit(1);
+                    }
+                  }
+                  currentVariety = variety;
+                  lookingForVariety = false;
+                  country = undefined;
+                }
+              } else if ((posVariety) in this.storage.Config.transcriptionErrors) {
+                variety = this
+                  .varietyFromText(this.storage.Config.transcriptionErrors[posVariety]);
+                partialVariety = '';
+                if (this.storage.Config.selectedVarieties.includes(variety)) {
+                  sivRecord = this.storage.registerVariety(variety);
+                  lookingForVariety = false;
+                  country = undefined;
+                }
+              } else if (posVariety in this.storage.Config.ignoreVariertyDefinition) {
+                partialVariety = '';
+              } else if (PdfSivParser.checkForPdfDate(txt)) {
+                // ignore, it's just a date
+              } else if (trimmedPosVariety.length && Object.values(this.storage.CNs).flat()
+                .some((i) => i.includes(trimmedPosVariety))) {
+                partialVariety = trimmedPosVariety;
+              } else if ((posVariety.length > 3) && (/^[. 0-9]*$/.test(posVariety))) {
+                console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
+                process.exit(1);
+              }
+            }
           }
+
           lastItem = item;
         });
 
@@ -352,7 +352,7 @@ export default class PdfSivParser extends GenericSivParser {
         console.log(`Caught exception${err.stack}`);
         process.exit(1);
       }
-      this.storage.completeParseCelex();
+      await this.storage.completeParseCelex();
     }
   }
 

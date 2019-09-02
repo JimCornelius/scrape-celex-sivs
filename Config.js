@@ -2,7 +2,7 @@ import cnCodes from './data/cnCodes.json';
 import countries from './data/countries.json';
 
 export default class Config {
-    static startPos = 5431;
+    static startPos = 4431;
 
     static puppeteerConfig = { headless: true };
 
@@ -60,9 +60,7 @@ export default class Config {
       '31998R0674': this.standardIgnoreMsg,
       '31997R1896': this.standardIgnoreMsg,
       '31997R0944': this.standardIgnoreMsg,
-      '31997R0348': 'written in columns, need\'s special parsing',
-      '31997R0276': 'bad formatting, need\'s special parsing',
-      '31997R0138': 'bad formatting, need\'s special parsing',
+
       '31996R1660': this.standardIgnoreMsg,
       '31996R1659': this.standardIgnoreMsg,
       '31996R1342': this.standardIgnoreMsg,
@@ -72,7 +70,6 @@ export default class Config {
       '31995R1400': 'written in columns, needs special parsing',
       '31995R1045': 'written in columns, needs special parsing',
       '31995R1036': 'written in columns, needs special parsing',
-      // '31995R0788': 'bad formatting, needs special parsing', // use this to test column parsing
       '31995R0078': 'written in columns, needs special parsing',
       '31996R1956': 'written in columns, needs special parsing', // use this to test column parsing
     };
