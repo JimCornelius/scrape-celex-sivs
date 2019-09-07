@@ -17,6 +17,24 @@ export default class HtmlSivParser extends GenericSivParser {
     })));
   }
 
+  async isCorrection(page) {
+    const tags = await this.getDocTitleTags(page);
+
+    return tags.some((el) => (
+      (
+        el.innerText.search(/correcting regulation/i) !== -1)
+        || el.innerText.search(/amending regulation/i) !== -1));
+  }
+
+  async getDocTitleTags(page) {
+    const selector = Object.values(this.storage.Config.docTitleSelector);
+    return page.$$eval(selector, (elements) => elements.map((el) => ({
+      tagName: el.tagName,
+      className: el.className,
+      innerText: el.innerText,
+    })));
+  }
+
   static async parseHTMLDate(page) {
     return page.evaluate(() => {
       const dateNode = document.querySelector('.hd-date');
@@ -29,71 +47,74 @@ export default class HtmlSivParser extends GenericSivParser {
 
   async parseHTML(celexDoc, page, date) {
     celexDoc.dateInJournal = date;
-    const theElements = await this.getElements(page);
+    if (this.isCorrection(page)) {
+      console.log('This regulation corrects one or more earlier regulations. Needs manual integration.');
+    } else {
+      const theElements = await this.getElements(page);
 
-    const entry = {
-      variety: undefined,
-      key: undefined,
-      value: undefined,
-      rawKey: undefined,
-      newVariety: false,
-    };
-    let sivRecord;
+      const entry = {
+        variety: undefined,
+        key: undefined,
+        value: undefined,
+        rawKey: undefined,
+        newVariety: false,
+      };
+      let sivRecord;
 
-    theElements.forEach((element) => {
-      this.processKeyAndValues(element, entry);
-      if (entry.newVariety) {
-        entry.variety = this.varietyFromText(element.innerText);
-        if (entry.variety === undefined) {
-          const txt = GenericSivParser.fixUpTextItem(element.innerText);
-          if (txt in this.storage.Config.transcriptionErrors) {
-            entry.variety = this.varietyFromText(this.storage.Config.transcriptionErrors[txt]);
-          } else {
-            console.log(`Fatal Error. Unknown variety code: ${element.innerText}`);
-            process.exit();
-          }
-        }
-
-        // sivRecord will contain all prices, for this variety
-        sivRecord = this.storage.registerVariety(entry.variety);
-        if (sivRecord === undefined) {
-          console.log(`Fatal Error. Can't create sivRecord ${entry.variety} duplicate suspected`);
-          process.exit(1);
-        }
-        // scrape for this variety on subsequent iterations
-        entry.newVariety = false;
-      } else if (entry.value !== undefined) {
-        // have an entry
-        this.setEntryInRecord(sivRecord, entry.key, entry.value);
-        entry.rawKey = undefined;
-        entry.key = undefined;
-        entry.value = undefined;
-      } else if (entry.rawKey !== undefined) {
-        // convertKey
-        const country = this.storage.findCountry(entry.rawKey);
-        if (country === undefined) {
-          console.log(`Fatal Error. Unknown country code ${entry.rawKey} ignored`);
-          process.exit(1);
-        } else {
+      theElements.forEach((element) => {
+        this.processKeyAndValues(element, entry);
+        if (entry.newVariety) {
+          entry.variety = this.varietyFromText(element.innerText);
           if (entry.variety === undefined) {
-            console.log(`Fatal Error. Country ${entry.rawKey}, before variety known.`);
+            const txt = GenericSivParser.fixUpTextItem(element.innerText);
+            if (txt in this.storage.Config.transcriptionErrors) {
+              entry.variety = this.varietyFromText(this.storage.Config.transcriptionErrors[txt]);
+            } else {
+              console.log(`Fatal Error. Unknown variety code: ${element.innerText}`);
+              process.exit();
+            }
+          }
+
+          // sivRecord will contain all prices, for this variety
+          sivRecord = this.storage.registerVariety(entry.variety);
+          if (sivRecord === undefined) {
+            console.log(`Fatal Error. Can't create sivRecord ${entry.variety} duplicate suspected`);
             process.exit(1);
           }
-          if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
-            console.log(`Fatal Error.  for ${entry.variety} : ${country}`);
+          // scrape for this variety on subsequent iterations
+          entry.newVariety = false;
+        } else if (entry.value !== undefined) {
+        // have an entry
+          this.setEntryInRecord(sivRecord, entry.key, entry.value);
+          entry.rawKey = undefined;
+          entry.key = undefined;
+          entry.value = undefined;
+        } else if (entry.rawKey !== undefined) {
+        // convertKey
+          const country = this.storage.findCountry(entry.rawKey);
+          if (country === undefined) {
+            console.log(`Fatal Error. Unknown country code ${entry.rawKey} ignored`);
             process.exit(1);
+          } else {
+            if (entry.variety === undefined) {
+              console.log(`Fatal Error. Country ${entry.rawKey}, before variety known.`);
+              process.exit(1);
+            }
+            if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
+              console.log(`Fatal Error.  for ${entry.variety} : ${country}`);
+              process.exit(1);
+            }
+            entry.key = country;
           }
-          entry.key = country;
-        }
-      } else {
+        } else {
         // no value, no new variety, no new key
         // something wnet wrong
-        console.log('Fatal Error. Unknown cause');
-        process.exit(1);
-      }
-    });
-
-    await this.storage.completeParseCelex();
+          console.log('Fatal Error. Unknown cause');
+          process.exit(1);
+        }
+      });
+      await this.storage.completeParseCelex();
+    }
   }
 
   processKeyAndValues(element, entry) {

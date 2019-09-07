@@ -70,28 +70,33 @@ export default class PdfSivParser extends GenericSivParser {
       // bunch up items that are within a space of each other
       let previous;
 
-      // arbitrary but good enough
+      // arbitrary but good enough for our needs
       const smallGap = 1.2; //
-      const biggerGap = 7.2; // this should be good enough for our needs
+      const overlap = -2.5;
+      const biggerGap = 17;
+      const rowSize = 10;
 
       orderedElements.forEach((el) => {
         if (!(el.innerText in this.storage.Config.filterOut)) {
+          if (elements.length) {
+            previous = elements[elements.length - 1];
+          }
           if (previous
-                && (el.left > (previous.right - smallGap))
-                && (el.left < (previous.right + smallGap))
-                && (el.top < ((previous.top + previous.bottom) / 2))
-                && (el.bottom > ((previous.top + previous.bottom) / 2))
+            && ((el.left - previous.right) > overlap)
+            && (el.left - previous.right) < smallGap
+            && Math.abs(el.bottom - previous.bottom) < rowSize
           ) {
-            elements[elements.length - 1].innerText += el.innerText;
-            elements[elements.length - 1].right = el.right;
+            // merge as one element without a space
+            previous.innerText += el.innerText;
+            previous.right = (previous.right + el.right) / 2;
           } else if (previous
-                && (el.left > (previous.right - biggerGap))
-                && (el.left < (previous.right + biggerGap))
-                && (el.top < ((previous.top + previous.bottom) / 2))
-                && (el.bottom > ((previous.top + previous.bottom) / 2))
+            && ((el.left - previous.right) > overlap)
+            && (el.left - previous.right) < biggerGap
+            && Math.abs(el.bottom - previous.bottom) < rowSize
           ) {
-            elements[elements.length - 1].innerText += (` ${el.innerText}`);
-            elements[elements.length - 1].right = el.right;
+            // merge as one element with a space
+            previous.innerText += (` ${el.innerText}`);
+            previous.right = (previous.right + el.right) / 2;
           } else {
             elements.push({
               innerText: el.innerText,
@@ -101,72 +106,132 @@ export default class PdfSivParser extends GenericSivParser {
               right: el.right,
             });
           }
-          previous = el;
         }
       });
     }
     return elements;
   }
 
-  static fixTranscriptionErrs(elements) {
-    if (elements) {
-      const columnHeaders = [];
-      // known OCR transcription errors
-      elements.forEach((el) => {
-        const txt = el.innerText
-          .replace('\'ECU', '(ECU')
-          .replace(/[^\w(/)]|_+/g, '')
-          .replace('WO', '100')
-          .replace('f', '(')
-          .replace('FC11', 'ECU')
-          .replace('100kg', '100kg)')
-          .replace('))', ')');
+  static fixTranscriptionErr(element) {
+    return element.innerText
+      .replace('\'ECU', '(ECU')
+      .replace(/[^\w(/)]|_+/g, '')
+      .replace('WO', '100')
+      .replace('f', '(')
+      .replace('FC11', 'ECU')
+      .replace('100kg', '100kg)')
+      .replace('))', ')');
+  }
 
-        if (txt === '(ECU/100kg)' || txt === '(EUR/100kg)') {
-          el.innerText = txt;
-          columnHeaders.push(el);
+  repairText(elements) {
+    // correctd in-place
+    let correctedElements = elements;
+    const columnHeaders = [];
+
+    // known OCR transcription issues
+    elements.every((el, i) => {
+      if (this.celexDoc.celexID === '31996R0378' && el.innerText === '528') {
+        if (i > 0 && elements[i - 1].innerText === '29,5') {
+          el.innerText = '728';
         }
-      });
-
-      if (columnHeaders.length > 0 && columnHeaders.length % 2 === 0) {
-        return undefined;
-        // PdfSivParser.deColumnise(elements, columnHeaders);
       }
-    }
 
-    return elements;
+      if (this.celexDoc.celexID === '31996R0655' && el.innerText === 'CN') {
+        el.innerText = 'CNcode';
+      }
+
+      if (this.celexDoc.celexID === '31996R0397' && el.innerText === '1') {
+        if (i > 0 && elements[i - 1].innerText === '999') {
+          el.innerText = 'Ignore me';
+        }
+      }
+
+      if (this.celexDoc.celexID === '31996R0066' && el.innerText === '1') {
+        if (i > 0 && elements[i - 1].innerText === '20 15 ,') {
+          el.innerText = 'Ignore me';
+        }
+      }
+
+      const txt = PdfSivParser.fixTranscriptionErr(el);
+
+      if (txt === '(ECU/100kg)' || txt === '(EUR/100kg)') {
+        el.innerText = txt;
+        columnHeaders.push(el);
+      }
+      if (
+        (txt.search(/correcting/i) !== -1)
+        || txt.search(/amending/i) !== -1) {
+        // early exit
+        correctedElements = undefined;
+        console.log('This regulation corrects one or more earlier regulations. Needs manual integration.');
+        return false;
+      }
+      return true;
+    });
+    if (columnHeaders.length > 0 && columnHeaders.length % 2 === 0) {
+      correctedElements = PdfSivParser.deColumnise(correctedElements, columnHeaders);
+    }
+    return correctedElements;
   }
 
-  static deColumnise(elements) {
-    // TDB
-    return elements;
+  static deColumnise(elementsIN, columnHeaders) {
+    // columnHeaders will always be pairs.
+    const elementsLeft = [];
+    const elementsRight = [];
+    const headerLeft = columnHeaders.shift();
+    const headerRight = columnHeaders.shift();
+
+    if (columnHeaders.length) {
+      this.doConsoleLog.log('Fatal error: unexpected column headers.');
+      process.exit(1);
+    }
+    if (headerLeft && headerRight) {
+      elementsIN.forEach((el) => {
+        // if element is above the column headers just stick it in the left
+        if (el.bottom < headerLeft.bottom && el.bottom < headerRight.bottom) {
+          elementsLeft.push(el);
+        } else if (el.left > headerLeft.right) {
+          elementsRight.push(el);
+        } else {
+          elementsLeft.push(el);
+        }
+      });
+    }
+
+    // need to be done again per column
+    const orderedElementsLeft = PdfSivParser.rationaliseOrder(elementsLeft);
+    const orderedElementsRight = PdfSivParser.rationaliseOrder(elementsRight);
+
+    return orderedElementsLeft.concat(orderedElementsRight);
   }
 
   static rationaliseOrder(elements) {
+    const wiggleRoom = 7.4;
     const items = [];
 
     elements.forEach((el) => {
       let insert = false;
+
       if (items.length) {
         for (let i = 0; i < items.length; i += 1) {
           const item = items[i];
-          if (
+          if (Math.abs(item.bottom - el.bottom) < wiggleRoom) {
             // close to same line
-            (item.top > (el.top - 4))
-            && (item.top < (el.top + 4))
-          ) {
             if (el.left < item.left) {
+              // console.log("a: ", el.bottom, el.innerText);
               insert = true;
-              break;
             }
-          } else if (el.top < item.top) {
+          } else if (el.bottom < item.bottom) {
+            // console.log("b: ", el.bottom, el.innerText);
             insert = true;
           }
           if (insert) {
+            // console.log("c: ", el.bottom, el.innerText);
             items.splice(i, 0, el);
+            // console.log("d: ", el.bottom, el.innerText);
             break;
           }
-        // in all other circumstances el is after item, so check next item
+        // in all other circumstances el is after item, so iterate and check next item
         }
       }
       if (!insert) {
@@ -237,9 +302,9 @@ export default class PdfSivParser extends GenericSivParser {
     for (const pageElements of this.pageTags) {
       const orderedElements = PdfSivParser.rationaliseOrder(pageElements);
       const elements = this.bunchNeighbours(orderedElements);
-      const fixedElements = PdfSivParser.fixTranscriptionErrs(elements);
+      const fixedElements = this.repairText(elements);
       if (fixedElements === undefined) {
-        console.log('Parsing columns not yet supported');
+        console.log('File is correcting earlier regulation');
         return undefined;
       }
       allElements = allElements.concat(fixedElements);
@@ -250,23 +315,14 @@ export default class PdfSivParser extends GenericSivParser {
   async parsePdfTags(elements) {
     if (elements !== undefined) {
       try {
-        const largeGap = 20;
         let date;
         let lookingForVariety = true;
         let sivRecord;
         let country;
         let topFound = false;
         let partialVariety = '';
-        let lastItem;
         let currentVariety;
-
         elements.forEach((item) => {
-          if (
-            lastItem
-          && ((lastItem.right + largeGap) < item.left)
-          ) {
-            partialVariety = '';
-          }
           const txt = GenericSivParser.fixUpTextItem(item.innerText);
           const posVariety = partialVariety + txt;
 
@@ -275,7 +331,7 @@ export default class PdfSivParser extends GenericSivParser {
             date = PdfSivParser.checkForPdfDate(txt);
           } else if (!topFound) {
             // ignore everything till we're at the top of the SIV list
-            topFound = (txt.localeCompare('CNcode', undefined, { sensitivity: 'base' }) === 0);
+            topFound = (txt.search(/cncode/i) !== -1);
           } else if (country
                     && sivRecord
                     && sivRecord.value === undefined
@@ -318,20 +374,23 @@ export default class PdfSivParser extends GenericSivParser {
                   country = undefined;
                 }
               } else if ((posVariety) in this.storage.Config.transcriptionErrors) {
-                variety = this
-                  .varietyFromText(this.storage.Config.transcriptionErrors[posVariety]);
-                partialVariety = '';
-                if (this.storage.Config.selectedVarieties.includes(variety)) {
-                  sivRecord = this.storage.registerVariety(variety);
-                  lookingForVariety = false;
-                  country = undefined;
+                variety = this.varietyFromText(this.storage.Config.transcriptionErrors[posVariety]);
+                if (variety) {
+                  if (this.storage.Config.selectedVarieties.includes(variety)) {
+                    sivRecord = this.storage.registerVariety(variety);
+                    lookingForVariety = false;
+                    country = undefined;
+                  }
+                  partialVariety = '';
+                } else {
+                  partialVariety = posVariety;
                 }
               } else if (posVariety in this.storage.Config.ignoreVariertyDefinition) {
                 partialVariety = '';
               } else if (PdfSivParser.checkForPdfDate(txt)) {
                 // ignore, it's just a date
               } else if (trimmedPosVariety.length && Object.values(this.storage.CNs).flat()
-                .some((i) => i.includes(trimmedPosVariety))) {
+                .some((i) => i.startsWith(trimmedPosVariety))) {
                 partialVariety = trimmedPosVariety;
               } else if ((posVariety.length > 3) && (/^[. 0-9]*$/.test(posVariety))) {
                 console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
@@ -339,13 +398,16 @@ export default class PdfSivParser extends GenericSivParser {
               }
             }
           }
-
-          lastItem = item;
         });
 
         if (!date) {
-        // fatal error unable to confirm the date for this CELEX
+          // fatal error unable to confirm the date for this CELEX
           console.log('Fatal error: can\'t confirm date of PDF');
+          process.exit(1);
+        }
+        if (!topFound) {
+          // fatal error unable to confirm any SIV table
+          console.log('Fatal error: can\'t find top of table');
           process.exit(1);
         }
       } catch (err) {
@@ -358,7 +420,7 @@ export default class PdfSivParser extends GenericSivParser {
 
   static checkForPdfDate(txt) {
     // look for date in format XX.XX.XXXX; X.XX.XXXX; XX.X.XXXX
-    const trio = txt.split('.').map((d) => d.trim());
+    const trio = txt.split('.').map((d) => Number(d.trim()));
     if (trio.length !== 3) return undefined;
     if (trio.some((a) => Number.isNaN(a))) return undefined;
     if (trio.some((a) => (a === 0))) return undefined;

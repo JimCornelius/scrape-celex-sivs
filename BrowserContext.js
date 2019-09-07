@@ -16,18 +16,6 @@ export default class BrowserContext {
     });
   }
 
-  //   static onDocEvent(event, val) {
-  //     if (event === 'pagecount') {
-  //       console.log('pagecount event in the Browser context');
-  //       const xx = val;
-  //       // BrowserContext.a = val;
-  //     } else if (event === 'textlayerrendered') {
-  //       const yy = val;
-  //       // BrowserContext.a = 2;
-  //       console.log('textlayerrendered event in the Browser context');
-  //     }
-  //   }
-
   static injectPdfViewer() {
     document.addEventListener('textlayerrendered', (event) => {
       window.onDocEvent('textlayerrendered', event.detail.pageNumber);
@@ -47,7 +35,6 @@ export default class BrowserContext {
   }
 
   static scrollPageIntoView(curPage) {
-    window.doConsoleLog(`curPage = ${curPage}`);
     const loadingIconTag = document.querySelector(`.page[data-page-number="${curPage}"] > .loadingIcon`);
     if (loadingIconTag) {
       loadingIconTag.scrollIntoView();

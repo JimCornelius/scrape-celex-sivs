@@ -120,7 +120,7 @@ export default class Storage {
         console.log(`Fatal Error: possible 3 digit country code ${txt} missed.`);
         process.exit(1);
       }
-      // else unonown three char string ignored
+      // else unknown three char string ignored
     }
     return countryKey;
   }

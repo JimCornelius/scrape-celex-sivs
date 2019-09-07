@@ -17,6 +17,7 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
+    "no-restricted-syntax": ["off", "ForInStatement"],
     "quote-props": "off",
     "no-console": "off",
     "no-prototype-builtins": "off",

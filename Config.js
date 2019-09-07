@@ -2,7 +2,7 @@ import cnCodes from './data/cnCodes.json';
 import countries from './data/countries.json';
 
 export default class Config {
-    static startPos = 4431;
+    static startPos = 0;
 
     static puppeteerConfig = { headless: true };
 
@@ -25,6 +25,7 @@ export default class Config {
     };
 
     static transcriptionErrors = {
+      '080903': '080930',
       '08089100': '07099100',
       '07071000': '07091000',
       '08052030.08052050.': '08052030.08052050.08052070.08052090',
@@ -37,6 +38,16 @@ export default class Config {
       '0702015': '07020015',
       '0707001.0': '07070010',
       '07099073.': '07099073',
+      '080810.51.08081053.': '08081051.08081053.',
+      '080810.51.08081053.08081059': '08081051.08081053.08081059',
+      '080.51001.0805': '08051001.0805',
+      '080.51001.08051005.': '08051001.08051005.',
+      '080.51001.08051005.08051009': '08051001.08051005.08051009',
+      '08081092.0808109408081098': '08081092.08081094.08081098',
+      'Of081092.0808': '08081092.0808',
+      'Of081092.08081094.': '08081092.08081094.',
+      'Of081092.08081094.08081098': '08081092.08081094.08081098',
+      '08081092.08081094.212': '',
     };
 
     static minVarieties = 3;
@@ -46,32 +57,25 @@ export default class Config {
         + ' of earlier SIV. Manual DB correction required.';
 
     static ignore = {
-      '32010R0944': this.standardIgnoreMsg,
-      '32008R0468': this.standardIgnoreMsg,
-      '32005R2002': this.standardIgnoreMsg,
-      '32005R1179': this.standardIgnoreMsg,
-      '32002R0510': this.standardIgnoreMsg,
-      '32001R2427': this.standardIgnoreMsg,
-      '32001R0684': this.standardIgnoreMsg,
+      '32001R2427': 'irrelevant document',
       '32001R1179': 'Incorrectly indexed. Lnks to a regulation'
             + ' on butter. Journal listing shows CELEX 32001R1170',
       '31999R2594': 'amended regulation, needs manual interpretation',
-      '31999R1491': this.standardIgnoreMsg,
-      '31998R0674': this.standardIgnoreMsg,
-      '31997R1896': this.standardIgnoreMsg,
-      '31997R0944': this.standardIgnoreMsg,
+      // '31999R1491': this.standardIgnoreMsg,
+      // '31998R0674': this.standardIgnoreMsg,
+      // '31997R1896': this.standardIgnoreMsg,
+      // '31997R0944': this.standardIgnoreMsg,
 
-      '31996R1660': this.standardIgnoreMsg,
-      '31996R1659': this.standardIgnoreMsg,
-      '31996R1342': this.standardIgnoreMsg,
+      // '31996R1660': this.standardIgnoreMsg,
+      // '31996R1659': this.standardIgnoreMsg,
+      // '31996R1342': this.standardIgnoreMsg,
+      // '31995R1978': this.standardIgnoreMsg,
       '31996D0338': 'Irrelevent document', // should really have been filtered out already
-      '31996R0808': this.standardIgnoreMsg,
       '31996R0710': 'Contains no SIVs',
-      '31995R1400': 'written in columns, needs special parsing',
-      '31995R1045': 'written in columns, needs special parsing',
-      '31995R1036': 'written in columns, needs special parsing',
-      '31995R0078': 'written in columns, needs special parsing',
-      '31996R1956': 'written in columns, needs special parsing', // use this to test column parsing
+      '31996R0732': 'Major problems with the OCR of this document, needs manual parsing',
+      '31996R0685': 'standardIgnoreMsg',
+      '31996R0651': 'Contains no SIVs',
+      '31996R0628': 'Contains no SIVs',
     };
 
     static dontIgnore = {
@@ -99,9 +103,15 @@ export default class Config {
     };
 
     static filterOut = {
+      // characters picked up by OCR littering the page
       'I': 'Known isolated character that block correct parsing',
       'II': 'Known characters that block correct parsing',
       'l': 'Known isolated character that block correct parsing',
+      'j': 'Known isolated character that block correct parsing',
+      '\\': 'Known isolated character that block correct parsing',
+      '-': 'Known isolated character that block correct parsing',
+      '»': 'Known isolated character that block correct parsing',
+      '\'': 'Known isolated character that block correct parsing',
     };
 
     static knownDuplicateCountry = {
@@ -133,6 +143,8 @@ export default class Config {
         sivDocs: 'sivDocs',
       },
     };
+
+    static docTitleSelector = 'doc-ti';
 
     static selectors = {
       code: '.tbl-cod',
