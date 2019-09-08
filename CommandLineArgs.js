@@ -2,17 +2,53 @@ import Config from './Config.js';
 
 export default class CommandLineArgs {
     static commands = {
-      '-p': {
-        command: this.setPos, consumes: 2, args: [], run: false,
+      '-c': {
+        command: () => { Config.storage.setResetCelexDB = true; },
+        consumes: 1,
+        args: [],
+        run: false,
       },
-      '-l': {
-        command: this.setResetLog, consumes: 1, args: [], run: false,
+      '-d': {
+        command: () => { Config.storage.setResetDocDB = true; },
+        consumes: 1,
+        args: [],
+        run: false,
       },
-      '-r': {
-        command: this.setResetDB, consumes: 1, args: [], run: false,
+      '-f': {
+        command: () => { Config.parse.search = true; },
+        consumes: 1,
+        args: [],
+        run: false,
       },
       '-h': {
-        command: this.setHeadless, consumes: 1, args: [], run: false,
+        command: () => { Config.puppeteerConfig.headless = false; },
+        consumes: 1,
+        args: [],
+        run: false,
+      },
+      '-l': {
+        command: () => { Config.storage.resetLog = true; },
+        consumes: 1,
+        args: [],
+        run: false,
+      },
+      '-p': {
+        command: (pos) => { Config.gatherer.startPage = pos; },
+        consumes: 2,
+        args: [],
+        run: false,
+      },
+      '-s': {
+        command: (pos) => { Config.skipToPos = pos; },
+        consumes: 2,
+        args: [],
+        run: false,
+      },
+      '-x': {
+        command: () => { Config.puppeteerConfig.parse.celex = false; },
+        consumes: 1,
+        args: [],
+        run: false,
       },
     };
 
@@ -34,23 +70,5 @@ export default class CommandLineArgs {
       Object.keys(this.commands).filter((k) => this.commands[k].run === true).forEach((k) => {
         this.commands[k].command.apply(this, this.commands[k].args);
       });
-    }
-
-    static setHeadless() {
-      Config.puppeteerConfig.headless = false;
-    }
-
-    static setPos(pos) {
-      Config.starPos = pos;
-    }
-
-    static setResetLog() {
-      // reset log before running
-      Config.storage.resetLog = true;
-    }
-
-    static setResetDB() {
-      // reset db before running
-      Config.storage.resetDB = true;
     }
 }

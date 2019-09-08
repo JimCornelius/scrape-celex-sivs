@@ -9,7 +9,7 @@ export default class HtmlSivParser extends GenericSivParser {
   }
 
   async getElements(page) {
-    const selector = Object.values(this.storage.Config.selectors).join(',');
+    const selector = Object.values(this.storage.Config.selectors.table).join(',');
     return page.$$eval(selector, (elements) => elements.map((el) => ({
       tagName: el.tagName,
       className: el.className,
@@ -27,8 +27,8 @@ export default class HtmlSivParser extends GenericSivParser {
   }
 
   async getDocTitleTags(page) {
-    const selector = Object.values(this.storage.Config.docTitleSelector);
-    return page.$$eval(selector, (elements) => elements.map((el) => ({
+    const selector = Object.values(this.storage.Config.selectors.title);
+    return page.$eval(selector, (elements) => elements.map((el) => ({
       tagName: el.tagName,
       className: el.className,
       innerText: el.innerText,
@@ -119,7 +119,7 @@ export default class HtmlSivParser extends GenericSivParser {
 
   processKeyAndValues(element, entry) {
     const txt = GenericSivParser.fixUpTextItem(element.innerText);
-    if (`.${element.className}` === this.storage.Config.selectors.code) {
+    if (`.${element.className}` === this.storage.Config.selectors.table.code) {
       // could be the tag for another variety
       // or key for country
       if (GenericSivParser.isKeyText(txt)) {
@@ -131,9 +131,9 @@ export default class HtmlSivParser extends GenericSivParser {
         entry.key = undefined;
         entry.value = undefined;
       }
-    } else if (`.${element.className}` === this.storage.Config.selectors.num) {
+    } else if (`.${element.className}` === this.storage.Config.selectors.table.num) {
       entry.value = txt;
-    } else if (`.${element.className}` === this.storage.Config.selectors.txt) {
+    } else if (`.${element.className}` === this.storage.Config.selectors.table.txt) {
       if (entry.rawKey === undefined) {
         entry.rawKey = txt;
       } else {

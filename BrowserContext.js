@@ -40,4 +40,29 @@ export default class BrowserContext {
       loadingIconTag.scrollIntoView();
     }
   }
+
+  // remainder of functions used for gatherer
+
+  static getCelexRecords(searchText) {
+    return [...[...document.querySelectorAll('.SearchResult')]
+      .filter((a) => a.innerText.search(new RegExp(searchText, 'i')) !== -1)]
+      .map((b) => ({
+        celexID: [...b.querySelectorAll('dt')]
+          .filter((c) => c.innerText === 'CELEX number: ')[0].nextSibling.innerText,
+        date: [...b.querySelectorAll('dt')]
+          .filter((c) => c.innerText === 'Date of document: ')[0].nextSibling.innerText,
+      }));
+  }
+
+  static getResultsTotal() {
+    return [...document.querySelectorAll('.checkbox > label > strong')][2].innerText;
+  }
+
+  static getNextButtonUrl() {
+    const nextButtons = [...document.querySelectorAll('[title="Next Page"]')];
+    if (nextButtons.length) {
+      return nextButtons[0].href;
+    }
+    return undefined;
+  }
 }

@@ -385,8 +385,6 @@ export default class PdfSivParser extends GenericSivParser {
                 } else {
                   partialVariety = posVariety;
                 }
-              } else if (posVariety in this.storage.Config.ignoreVariertyDefinition) {
-                partialVariety = '';
               } else if (PdfSivParser.checkForPdfDate(txt)) {
                 // ignore, it's just a date
               } else if (trimmedPosVariety.length && Object.values(this.storage.CNs).flat()

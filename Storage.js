@@ -1,15 +1,27 @@
 import mongodb from 'mongodb';
 
 export default class Storage {
+  // Factory method
+  static async createStorage(config) {
+    const storage = new Storage(config);
+    return storage.prepareMongo();
+  }
+
   constructor(Config) {
+    this.celexStandardIDs = [];
+    this.celexNonStandardIDs = [];
+    this.rejected = 0;
     this.parsedCount = 0;
     this.knownIDs = [];
     this.CNs = [];
     this.Config = Config;
+    this.validateCountryCodes();
+  }
 
+  validateCountryCodes() {
     //  validate that the country code list has no anomalies
-    const char2 = Config.countries.map((i) => i[0]);
-    const digit3 = Config.countries.map((i) => i[1]);
+    const char2 = this.Config.jsonData.countries.map((i) => i[0]);
+    const digit3 = this.Config.jsonData.countries.map((i) => i[1]);
     const excess2 = [...new Set(char2.filter((i) => char2.indexOf(i) !== char2.lastIndexOf(i)))];
     const excess3 = [...new Set(digit3.filter((i) => digit3.indexOf(i) !== digit3.lastIndexOf(i)))];
 
@@ -22,38 +34,50 @@ export default class Storage {
       console.log(`Fatal error: duplicate 3 letter country code(s): ${excess3.join(', ')}`);
       process.exit();
     }
+  }
 
-    // for convenience concatenate variety CN codes where grouped
-    this.CNs = Object.fromEntries(
-      Object.values(Config.cnCodes).map(
-        (k, v) => [Object.keys(Config.cnCodes)[v], k.map((i) => i.join('.'))],
-      ),
+  async prepareMongo() {
+    this.mongoClient = await mongodb.MongoClient.connect(
+      this.Config.storage.mongo.url, this.Config.storage.mongo.clientOptions,
     );
 
-    return (async () => {
-      this.db = (await mongodb.MongoClient.connect(
-        Config.storage.mongo.url, Config.storage.mongo.clientOptions,
-      )).db(Config.storage.mongo.dbName);
+    this.db = this.mongoClient.db(this.Config.storage.mongo.dbName);
 
-      if (Config.storage.resetDB) {
-        console.log('resetting database');
-        this.sivDocs = this.db.collection(Config.storage.mongo.sivDocs);
-        await this.sivDocs.drop();
-      }
+    this.standardIDs = this.db.collection(this.Config.storage.mongo.standardIDs);
+    this.nonStandardIDs = this.db.collection(this.Config.storage.mongo.nonStandardIDs);
+    this.knownIDs = this.db.collection(this.Config.storage.mongo.knownIDs);
 
-      // sivID collection will already exist
+    this.sivDocs = this.db.collection(this.Config.storage.mongo.sivDocs);
+    this.sivDocs.createIndex({ celexID: 1 }, { unique: true });
+
+    if (this.Config.storage.setResetCelexDB) {
+      console.log('resetting Celed ID list');
+      await this.standardIDs.drop();
+      await this.nonStandardIDs.drop();
+      this.standardIDs.createIndex({ 'celexID': 1 }, { unique: true });
+      this.nonStandardIDs.createIndex({ 'celexID': 1 }, { unique: true });
+    }
+
+    if (this.Config.storage.setResetDocDB) {
+      console.log('resetting database');
+      this.sivDocs = this.db.collection(this.Config.storage.mongo.sivDocs);
+      this.sivDocs.createIndex({ 'celexID': 1 }, { unique: true });
+      await this.sivDocs.drop();
+    }
+
+    this.messageLog = this.db.collection('messageLog');
+    if (this.Config.storage.resetLog) {
+      console.log('resetting log');
+      await this.messageLog.drop();
       this.messageLog = this.db.collection('messageLog');
-      this.knownIDs = this.db.collection(Config.storage.mongo.knownIDs);
-      this.sivDocs = this.db.collection(Config.storage.mongo.sivDocs);
-      this.sivDocs.createIndex({ celexID: 1 }, { unique: true });
+    }
 
-      if (Config.storage.setResetLog) {
-        console.log('resetting log');
-        await this.messageLog.drop();
-        this.messageLog = this.db.collection('messageLog');
-      }
-      return this; // when done
-    })();
+    console.log('Created collections with unique index for celexID property');
+    return this; // when done
+  }
+
+  async close() {
+    this.mongoClient.close();
   }
 
   incrementParsedCount() {
@@ -61,8 +85,15 @@ export default class Storage {
     return this.parsedCount;
   }
 
-  async checkDocExists(celexID) {
+  async checkSivDocExists(celexID) {
     return ((await this.sivDocs.countDocuments({ celexID }, { limit: 1 })) > 0);
+  }
+
+  async checkCelexIDExists(celexID) {
+    return (
+      (await this.standardIDs.countDocuments({ celexID }, { limit: 1 }) > 0)
+      || (await this.nonStandardIDs.countDocuments({ celexID }, { limit: 1 }) > 0)
+    );
   }
 
   async completeParseCelex() {
@@ -97,18 +128,18 @@ export default class Storage {
     let countryKey;
     // could be CN code or, on older files, code for country;
     if (txt.length === 2) {
-      const iText = this.Config.countries.map((i) => i[0]).indexOf(txt);
+      const iText = this.Config.jsonData.countries.map((i) => i[0]).indexOf(txt);
       if (iText !== -1) {
-        countryKey = this.Config.countries[iText][index2];
+        countryKey = this.Config.jsonData.countries[iText][index2];
       } else if (/^[A-Z]+$/.test(txt)) {
         console.log(`Fatal Error: possible 2 letter country code ${txt} missed`);
         process.exit(1);
       }
       // else unknown two char string ignored
     } else if (txt.length === 3) {
-      const iText = this.Config.countries.map((i) => i[1]).indexOf(txt);
+      const iText = this.Config.jsonData.countries.map((i) => i[1]).indexOf(txt);
       if (iText !== -1) {
-        countryKey = this.Config.countries[iText][index2];
+        countryKey = this.Config.jsonData.countries[iText][index2];
       } else if (txt === 'MGB') {
         // special case the Maghreb agreement covers Algeria,
         // Morocco & Tunisia
@@ -125,10 +156,7 @@ export default class Storage {
     return countryKey;
   }
 
-  async nextCelexDoc(first = false) {
-    if (first) {
-      this.setCelexIDCursor(this.Config.startPos);
-    }
+  async nextCelexDoc() {
     return this.newCelexDoc(await this.cursor.next());
   }
 
@@ -165,9 +193,13 @@ export default class Storage {
     return this.celexDoc;
   }
 
+  async fileCount() {
+    return this.knownIDs.find({}).count();
+  }
+
   setCelexIDCursor(index = 0) {
     // cursor for the whole collection
-    // shoud only be called once
+    // should only be called once
     this.cursor = this.knownIDs.find({}).skip(index);
     this.cursor.batchSize(20);
     return this.cursor;
@@ -191,5 +223,52 @@ export default class Storage {
         this.log(error.errmsg);
       }
     }
+  }
+
+  async storeAsDocs(collection, records) {
+    if (records.length) {
+      try {
+        await collection.insertMany(records, { ordered: false });
+      } catch (error) {
+        // should log errors in an error log too
+        const eMsg = `insertMany() completed: ${error.result.result.nInserted}; incomplete: ${error.result.result.writeErrors.length}`;
+        this.log(eMsg);
+        error.result.getWriteErrors().map((e) => e.errmsg).forEach((msg) => this.log(msg));
+      }
+    }
+  }
+
+  static isStandardFormat(celexID) {
+    return (
+      celexID.includes('R')
+    && !(celexID.includes('D')
+    || celexID.includes('C')
+    || celexID.includes('(')));
+  }
+
+  async storeCelexIDs(celexIDs, rejects) {
+    this.rejected += rejects;
+    celexIDs.forEach((x) => {
+      if (Storage.isStandardFormat(x.celexID)) {
+        this.celexStandardIDs.push(x.celexID);
+      } else {
+        this.celexNonStandardIDs.push(x.celexID);
+      }
+    });
+
+    await this.storeAsDocs(this.standardIDs, celexIDs
+      .filter((x) => Storage.isStandardFormat(x.celexID)));
+
+    await this.storeAsDocs(this.nonStandardIDs, celexIDs
+      .filter((x) => !Storage.isStandardFormat(x.celexID)));
+
+    const standard = await this.standardIDs.countDocuments();
+    const nonStandard = await this.nonStandardIDs.countDocuments();
+
+    console.log(
+      `Page: ${this.currentPage} Total saved records:${this.rejected + standard + nonStandard} `
+            + `of ${this.nResults}; standard: ${standard}; non-standard: ${nonStandard}; `
+            + `${this.rejected} rejected.`,
+    );
   }
 }
