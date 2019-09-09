@@ -1,4 +1,3 @@
-import EventEmitter from 'events';
 import GenericSivParser from './GenericSivParser.js';
 import BrowserContext from './BrowserContext.js';
 
@@ -7,7 +6,6 @@ export default class PdfSivParser extends GenericSivParser {
   constructor(storage) {
     // don't overuse constructor, save for initiate function
     super();
-    this.emitter = new EventEmitter();
     this.storage = storage;
   }
 
@@ -59,7 +57,7 @@ export default class PdfSivParser extends GenericSivParser {
       } else {
         // All pages rendered, we can now parse the whole PDF
         // emit a message to pass control back to func parsePdf awaiting
-        this.emitter.emit('readyToParse');
+        this.storage.emitter.emit('readyToParse');
       }
     }
   }
@@ -198,7 +196,7 @@ export default class PdfSivParser extends GenericSivParser {
       });
     }
 
-    // need to be done again per column
+    // needs to be repeated per column
     const orderedElementsLeft = PdfSivParser.rationaliseOrder(elementsLeft);
     const orderedElementsRight = PdfSivParser.rationaliseOrder(elementsRight);
 
@@ -218,20 +216,15 @@ export default class PdfSivParser extends GenericSivParser {
           if (Math.abs(item.bottom - el.bottom) < wiggleRoom) {
             // close to same line
             if (el.left < item.left) {
-              // console.log("a: ", el.bottom, el.innerText);
               insert = true;
             }
           } else if (el.bottom < item.bottom) {
-            // console.log("b: ", el.bottom, el.innerText);
             insert = true;
           }
           if (insert) {
-            // console.log("c: ", el.bottom, el.innerText);
             items.splice(i, 0, el);
-            // console.log("d: ", el.bottom, el.innerText);
             break;
           }
-        // in all other circumstances el is after item, so iterate and check next item
         }
       }
       if (!insert) {
@@ -283,22 +276,21 @@ export default class PdfSivParser extends GenericSivParser {
     await this.readyToParse();
     // wait for parsing to complete and we're done for this page
     await this.parsePdfTags(this.collectElements());
-    this.emitter.removeAllListeners();
+    this.storage.emitter.removeAllListeners();
   }
 
   async readyToParse() {
     await new Promise((resolve) => {
-      this.emitter.on('readyToParse', resolve);
+      this.storage.emitter.on('readyToParse', resolve);
     });
   }
 
   collectElements() {
-    // rearrange (potentially) the tags on each page so that they are correctly ordered
+    // rearrange (potentially) the tags on each page
+    // so that they are correctly ordered
     // bunch up into words and phrases,
     // sort out columns so we can parse consistently
     let allElements = [];
-    // eed early break, use foEach once sorted
-    // eslint-disable-next-line no-restricted-syntax
     for (const pageElements of this.pageTags) {
       const orderedElements = PdfSivParser.rationaliseOrder(pageElements);
       const elements = this.bunchNeighbours(orderedElements);
@@ -312,98 +304,108 @@ export default class PdfSivParser extends GenericSivParser {
     return allElements;
   }
 
+  parseElement(item) {
+    const txt = GenericSivParser.fixUpTextItem(item.innerText);
+    const possibleKey = this.partialVariety + txt;
+
+    if (!this.state.date) {
+      // ignore everything till we have the date
+      this.state.date = PdfSivParser.checkForPdfDate(txt);
+    } else if (!this.state.topFound) {
+      // ignore everything till we're at the top of the SIV list
+      this.state.topFound = (txt.search(/cncode/i) !== -1);
+    } else if (this.state.country
+                && this.state.sivRecord
+                && this.state.sivRecord.value === undefined
+                && !(Number.isNaN(Number(txt)))) {
+      this.setEntryInRecord(this.state.sivRecord, this.state.country, txt);
+      this.state.lookingForVariety = true;
+      this.state.country = undefined;
+    } else {
+      this.interpretKeys(possibleKey, txt);
+    }
+  }
+
+  interpretKeys(possibleKey, txt) {
+    if (this.state.sivRecord && this.state.country === undefined) {
+      this.state.country = this.storage.findCountry(this.state.possibleKey);
+      if (this.state.country) {
+        this.state.partialVariety = '';
+        if ([this.state.country].flat().some((i) => this.state.sivRecord.hasOwnProperty(i))) {
+          if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
+            console.log(`Fatal error. Already have an entry for ${this.state.currentVariety} : ${this.state.country}`);
+            process.exit(1);
+          }
+        }
+      }
+    }
+    if (this.state.lookingForVariety && !this.state.country) {
+      this.lookForVariety(possibleKey, txt);
+    }
+  }
+
+  updateVariety(variety) {
+    this.state.partialVariety = '';
+    if (this.storage.Config.selectedVarieties.includes(variety)) {
+      // new variety, register it
+      this.state.sivRecord = this.storage.registerVariety(variety);
+      if (this.state.sivRecord === undefined) {
+        if (this.celexDoc.celexID in this.storage.Config.multiVarietyDefs) {
+          this.state.sivRecord = this.storage.getVarietySiv(variety);
+        } else {
+          console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
+          process.exit(1);
+        }
+      }
+      this.state.currentVariety = variety;
+      this.state.lookingForVariety = false;
+      this.state.country = undefined;
+    }
+  }
+
+  lookForVariety(possibleKey, txt) {
+    let variety = this.varietyFromText(txt) || this.varietyFromText(possibleKey);
+    const trimmedV = GenericSivParser.trimVarietyCode(possibleKey);
+    if (variety) {
+      this.updateVariety(variety);
+    } else if ((possibleKey) in this.storage.Config.transcriptionErrors) {
+      variety = this.varietyFromText(this.storage.Config.transcriptionErrors[possibleKey]);
+      if (variety) {
+        if (this.storage.Config.selectedVarieties.includes(variety)) {
+          this.state.sivRecord = this.storage.registerVariety(variety);
+          this.state.lookingForVariety = false;
+          this.state.country = undefined;
+        }
+        this.state.partialVariety = '';
+      } else {
+        this.state.partialVariety = possibleKey;
+      }
+    } else if (PdfSivParser.checkForPdfDate(txt)) {
+      // ignore, it's just a date
+    } else if (trimmedV.length && Object.values(this.storage.CNs).flat()
+      .some((i) => i.startsWith(trimmedV))) {
+      this.state.partialVariety = trimmedV;
+    } else if ((possibleKey.length > 3) && (/^[. 0-9]*$/.test(possibleKey))) {
+      console.log(`Fatal error: Looking for variety; ${possibleKey} does not match any known varieties`);
+      process.exit(1);
+    }
+  }
+
   async parsePdfTags(elements) {
     if (elements !== undefined) {
       try {
-        let date;
-        let lookingForVariety = true;
-        let sivRecord;
-        let country;
-        let topFound = false;
-        let partialVariety = '';
-        let currentVariety;
-        elements.forEach((item) => {
-          const txt = GenericSivParser.fixUpTextItem(item.innerText);
-          const posVariety = partialVariety + txt;
-
-          if (!date) {
-            // ignore everything till we have the date
-            date = PdfSivParser.checkForPdfDate(txt);
-          } else if (!topFound) {
-            // ignore everything till we're at the top of the SIV list
-            topFound = (txt.search(/cncode/i) !== -1);
-          } else if (country
-                    && sivRecord
-                    && sivRecord.value === undefined
-                    && !(Number.isNaN(Number(txt)))) {
-            this.setEntryInRecord(sivRecord, country, txt);
-            lookingForVariety = true;
-            country = undefined;
-          } else {
-            if (sivRecord && country === undefined) {
-              // will always be looking for the variety as well
-              country = this.storage.findCountry(posVariety);
-              if (country) {
-                partialVariety = '';
-                if ([country].flat().some((i) => sivRecord.hasOwnProperty(i))) {
-                  if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
-                    console.log(`Fatal error. Already have an entry for ${currentVariety} : ${country}`);
-                    process.exit(1);
-                  }
-                }
-              }
-            }
-            if (lookingForVariety && !country) {
-              let variety = this.varietyFromText(txt) || this.varietyFromText(posVariety);
-              const trimmedPosVariety = GenericSivParser.trimVarietyCode(posVariety);
-              if (variety) {
-                partialVariety = '';
-                if (this.storage.Config.selectedVarieties.includes(variety)) {
-                  // new variety, register it
-                  sivRecord = this.storage.registerVariety(variety);
-                  if (sivRecord === undefined) {
-                    if (this.celexDoc.celexID in this.storage.Config.multiVarietyDefs) {
-                      sivRecord = this.storage.getVarietySiv(variety);
-                    } else {
-                      console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
-                      process.exit(1);
-                    }
-                  }
-                  currentVariety = variety;
-                  lookingForVariety = false;
-                  country = undefined;
-                }
-              } else if ((posVariety) in this.storage.Config.transcriptionErrors) {
-                variety = this.varietyFromText(this.storage.Config.transcriptionErrors[posVariety]);
-                if (variety) {
-                  if (this.storage.Config.selectedVarieties.includes(variety)) {
-                    sivRecord = this.storage.registerVariety(variety);
-                    lookingForVariety = false;
-                    country = undefined;
-                  }
-                  partialVariety = '';
-                } else {
-                  partialVariety = posVariety;
-                }
-              } else if (PdfSivParser.checkForPdfDate(txt)) {
-                // ignore, it's just a date
-              } else if (trimmedPosVariety.length && Object.values(this.storage.CNs).flat()
-                .some((i) => i.startsWith(trimmedPosVariety))) {
-                partialVariety = trimmedPosVariety;
-              } else if ((posVariety.length > 3) && (/^[. 0-9]*$/.test(posVariety))) {
-                console.log(`Fatal error: Looking for variety; ${posVariety} does not match any known varieties`);
-                process.exit(1);
-              }
-            }
-          }
-        });
-
-        if (!date) {
+        this.state = {
+          lookingForVariety: true,
+          topFound: false,
+          partialVariety: '',
+        };
+        elements.forEach(this.parseElement, this);
+        if (!this.state.date) {
           // fatal error unable to confirm the date for this CELEX
           console.log('Fatal error: can\'t confirm date of PDF');
           process.exit(1);
         }
-        if (!topFound) {
+        if (!this.state.topFound) {
           // fatal error unable to confirm any SIV table
           console.log('Fatal error: can\'t find top of table');
           process.exit(1);

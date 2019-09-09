@@ -67,8 +67,9 @@ export default class HtmlSivParser extends GenericSivParser {
           entry.variety = this.varietyFromText(element.innerText);
           if (entry.variety === undefined) {
             const txt = GenericSivParser.fixUpTextItem(element.innerText);
-            if (txt in this.storage.Config.transcriptionErrors) {
-              entry.variety = this.varietyFromText(this.storage.Config.transcriptionErrors[txt]);
+            if (txt in this.storage.Config.ErrCorrection.transcriptionErrors) {
+              entry.variety = this
+                .varietyFromText(this.storage.Config.ErrCorrection.transcriptionErrors[txt]);
             } else {
               console.log(`Fatal Error. Unknown variety code: ${element.innerText}`);
               process.exit();

@@ -22,6 +22,7 @@ module.exports = {
     "no-console": "off",
     "no-prototype-builtins": "off",
     "no-param-reassign": ["error", { "props": false }],
-    "import/extensions": ["error", "ignorePackages"]
+    "import/extensions": ["error", "ignorePackages"],
+    "no-plusplus": "off",
   },
 };

@@ -1,3 +1,4 @@
+import EventEmitter from 'events';
 import mongodb from 'mongodb';
 
 export default class Storage {
@@ -8,11 +9,12 @@ export default class Storage {
   }
 
   constructor(Config) {
+    this.emitter = new EventEmitter();
     this.celexStandardIDs = [];
     this.celexNonStandardIDs = [];
     this.rejected = 0;
     this.parsedCount = 0;
-    this.knownIDs = [];
+
     this.CNs = [];
     this.Config = Config;
     this.validateCountryCodes();
@@ -45,7 +47,6 @@ export default class Storage {
 
     this.standardIDs = this.db.collection(this.Config.storage.mongo.standardIDs);
     this.nonStandardIDs = this.db.collection(this.Config.storage.mongo.nonStandardIDs);
-    this.knownIDs = this.db.collection(this.Config.storage.mongo.knownIDs);
 
     this.sivDocs = this.db.collection(this.Config.storage.mongo.sivDocs);
     this.sivDocs.createIndex({ celexID: 1 }, { unique: true });
@@ -81,7 +82,7 @@ export default class Storage {
   }
 
   incrementParsedCount() {
-    this.parsedCount += 1;
+    this.parsedCount++;
     return this.parsedCount;
   }
 
@@ -89,11 +90,12 @@ export default class Storage {
     return ((await this.sivDocs.countDocuments({ celexID }, { limit: 1 })) > 0);
   }
 
-  async checkCelexIDExists(celexID) {
+
+  async checkCelexIDExists(celexDoc) {
+    const { celexID } = celexDoc;
     return (
       (await this.standardIDs.countDocuments({ celexID }, { limit: 1 }) > 0)
-      || (await this.nonStandardIDs.countDocuments({ celexID }, { limit: 1 }) > 0)
-    );
+    || (await this.nonStandardIDs.countDocuments({ celexID }, { limit: 1 }) > 0));
   }
 
   async completeParseCelex() {
@@ -194,13 +196,13 @@ export default class Storage {
   }
 
   async fileCount() {
-    return this.knownIDs.find({}).count();
+    return this.sivDocs.find({}).count();
   }
 
   setCelexIDCursor(index = 0) {
     // cursor for the whole collection
     // should only be called once
-    this.cursor = this.knownIDs.find({}).skip(index);
+    this.cursor = this.sivDocs.find({}).skip(index);
     this.cursor.batchSize(20);
     return this.cursor;
   }
@@ -241,12 +243,15 @@ export default class Storage {
   static isStandardFormat(celexID) {
     return (
       celexID.includes('R')
-    && !(celexID.includes('D')
-    || celexID.includes('C')
-    || celexID.includes('(')));
+      && !(celexID.includes('D')
+        || celexID.includes('C')
+        || celexID.includes('('))
+    );
   }
 
   async storeCelexIDs(celexIDs, rejects) {
+    // this is just storing as an array
+    // possibly don't rally need this.
     this.rejected += rejects;
     celexIDs.forEach((x) => {
       if (Storage.isStandardFormat(x.celexID)) {

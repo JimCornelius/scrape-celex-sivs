@@ -14,31 +14,43 @@ export default class SivCelexIdGatherer {
 
   async gather() {
     const u = this.storage.Config.gatherer.urlConfig;
+    const { startPage } = this.storage.Config.gatherer;
     // get first page of Search, then keep hitting the next button
     // quicker if we manually change the settings to get 20 items per page
     const fullUrl = `${u.search}?${u.searchTerm}`
       + `&${u.sessionID}&${u.type}&${u.lang}`
-      + `&${u.scope}&${u.sortBy}&${u.sortOrder}&page=${this.storage.Config.gatherer.startPage}`;
-    this.iterateThroughPages(fullUrl, true);
+      + `&${u.scope}&${u.sortBy}&${u.sortOrder}&page=${startPage}`;
+    this.iterateThroughPages(fullUrl, true, startPage);
     await this.completedGathering();
   }
 
   async completedGathering() {
     await new Promise((resolve) => {
-      this.emitter.on('completedGathering', resolve);
+      this.storage.emitter.on('completedGathering', resolve);
     });
   }
 
-  async iterateThroughPages(url, first) {
+  static async asyncFilterArray(arr, callback) {
+    return arr.reduce(async (res, val) => {
+      const filtered = await res;
+      if (await callback(val)) {
+        filtered.push(val);
+      }
+      return filtered;
+    }, Promise.resolve([]));
+  }
+
+  async iterateThroughPages(url, first, pageNo) {
     try {
       await this.page.goto(url, { waitUntil: 'networkidle0' });
       if (first) {
         this.storage.nResults = await this.page.evaluate(BrowserContext.getResultsTotal);
-        console.log(`Total result: ${this.storage.nResults}`);
+        console.log(`Total results: ${this.storage.nResults}`);
         await this.adjustMetaData();
       }
       this.storage.currentPage = await this.page.$eval('#pagingInput1', (el) => el.value);
 
+      console.log(`Scraping results from page: ${pageNo}`);
       const records = await this.page.evaluate(
         BrowserContext.getCelexRecords,
         this.storage.Config.gatherer.searchText,
@@ -49,12 +61,21 @@ export default class SivCelexIdGatherer {
       if (rejectCount > 0) {
         console.log(`${rejectCount} item${rejectCount > 1 ? 's' : ''} on the page rejected`);
       }
-      await this.storage.storeCelexIDs(records, rejectCount);
+
+      const callback = this.storage.checkCelexIDExists.bind(this.storage);
+      const filteredOutRecords = await SivCelexIdGatherer.asyncFilterArray(records, callback);
+      const filteredInRecords = records.filter((item) => !filteredOutRecords.includes(item));
+
+      filteredOutRecords.forEach((item) => {
+        console.log(`ID ${item.celexID} is already in the database`);
+      });
+      
+      await this.storage.storeCelexIDs(filteredInRecords, rejectCount);
 
       // if there's a next page use that
       const nextUrl = await this.page.evaluate(BrowserContext.getNextButtonUrl);
       if (nextUrl) {
-        this.iterateThroughPages(nextUrl, false);
+        this.iterateThroughPages(nextUrl, false, pageNo + 1);
       } else {
         this.finishUp();
       }
@@ -80,6 +101,6 @@ export default class SivCelexIdGatherer {
     this.storage.storeToFile();
     console.log('Job done');
     this.cleanUp();
-    this.emitter.emit('completedGathering');
+    this.storage.emitter.emit('completedGathering');
   }
 }
