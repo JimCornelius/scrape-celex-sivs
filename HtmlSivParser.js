@@ -51,7 +51,7 @@ export default class HtmlSivParser extends GenericSivParser {
     } else {
       const theElements = await this.getElements(page);
 
-      const entry = {
+      let entry = {
         variety: undefined,
         key: undefined,
         value: undefined,
@@ -61,7 +61,7 @@ export default class HtmlSivParser extends GenericSivParser {
       let sivRecord;
 
       theElements.forEach((element) => {
-        this.processKeyAndValues(element, entry);
+        entry = this.processKeyAndValues(element, entry);
         if (entry.newVariety) {
           const txt = GenericSivParser.fixUpTextItem(element.innerText);
           entry.variety = this.varietyFromText(txt);
@@ -117,28 +117,30 @@ export default class HtmlSivParser extends GenericSivParser {
     }
   }
 
-  processKeyAndValues(element, entry) {
+  processKeyAndValues(element, entryIn) {
+    const entryOut = entryIn;
     const txt = GenericSivParser.fixUpTextItem(element.innerText);
     if (`.${element.className}` === this.storage.Config.selectors.table.code) {
       // could be the tag for another variety
       // or key for country
       if (GenericSivParser.isKeyText(txt)) {
-        entry.rawKey = txt;
+        entryOut.rawKey = txt;
       } else {
         // must be start of new variety (or error)
-        entry.newVariety = true;
-        entry.rawKey = undefined;
-        entry.key = undefined;
-        entry.value = undefined;
+        entryOut.newVariety = true;
+        entryOut.rawKey = undefined;
+        entryOut.key = undefined;
+        entryOut.value = undefined;
       }
     } else if (`.${element.className}` === this.storage.Config.selectors.table.num) {
-      entry.value = txt;
+      entryOut.value = txt;
     } else if (`.${element.className}` === this.storage.Config.selectors.table.txt) {
-      if (entry.rawKey === undefined) {
-        entry.rawKey = txt;
+      if (entryOut.rawKey === undefined) {
+        entryOut.rawKey = txt;
       } else {
-        entry.value = txt;
+        entryOut.value = txt;
       }
     }
+    return entryOut;
   }
 }

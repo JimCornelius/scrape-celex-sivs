@@ -21,6 +21,7 @@ export default class GenericSivParser {
       .replace('87,1 ,', '87.1')
       .replace('69 \'j', '69.1')
       .replace('53 8', '53.8')
+      .replace(/\u039C\u039A/g, 'MK')
       .replace(/‘/g, '')
       .replace(/^\. /, '')
       .replace(/\s/g, '')
