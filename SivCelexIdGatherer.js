@@ -101,7 +101,7 @@ export default class SivCelexIdGatherer {
     // don't noth storing  a test tile anymore
     // console.log('Storing json file');
     //  this.storage.storeToFile();
-    console.log('Gathering comoleted');
+    console.log('Gathering completed');
     this.storage.emitter.emit('completedGathering');
   }
 }

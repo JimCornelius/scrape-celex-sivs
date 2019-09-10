@@ -21,14 +21,13 @@ export default class HtmlSivParser extends GenericSivParser {
     const tags = await this.getDocTitleTags(page);
 
     return tags.some((el) => (
-      (
-        el.innerText.search(/correcting regulation/i) !== -1)
+      (el.innerText.search(/correcting regulation/i) !== -1)
         || el.innerText.search(/amending regulation/i) !== -1));
   }
 
   async getDocTitleTags(page) {
-    const selector = Object.values(this.storage.Config.selectors.title);
-    return page.$eval(selector, (elements) => elements.map((el) => ({
+    const selector = this.storage.Config.selectors.title;
+    return page.$$eval(selector, (elements) => elements.map((el) => ({
       tagName: el.tagName,
       className: el.className,
       innerText: el.innerText,
@@ -47,7 +46,7 @@ export default class HtmlSivParser extends GenericSivParser {
 
   async parseHTML(celexDoc, page, date) {
     celexDoc.dateInJournal = date;
-    if (this.isCorrection(page)) {
+    if (await this.isCorrection(page)) {
       console.log('This regulation corrects one or more earlier regulations. Needs manual integration.');
     } else {
       const theElements = await this.getElements(page);
@@ -64,9 +63,9 @@ export default class HtmlSivParser extends GenericSivParser {
       theElements.forEach((element) => {
         this.processKeyAndValues(element, entry);
         if (entry.newVariety) {
-          entry.variety = this.varietyFromText(element.innerText);
+          const txt = GenericSivParser.fixUpTextItem(element.innerText);
+          entry.variety = this.varietyFromText(txt);
           if (entry.variety === undefined) {
-            const txt = GenericSivParser.fixUpTextItem(element.innerText);
             if (txt in this.storage.Config.ErrCorrection.transcriptionErrors) {
               entry.variety = this
                 .varietyFromText(this.storage.Config.ErrCorrection.transcriptionErrors[txt]);

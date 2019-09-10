@@ -2,19 +2,19 @@ module.exports = {
   env: {
     browser: true,
     node: true,
-    es6: true,
+    es6: true
   },
   extends: [
-    'airbnb-base',
+    'airbnb-base'
   ],
   globals: {
     Atomics: 'readonly',
-    SharedArrayBuffer: 'readonly',
+    SharedArrayBuffer: 'readonly'
   },
   parser: 'babel-eslint',
   parserOptions: {
     ecmaVersion: 2018,
-    sourceType: 'module',
+    sourceType: 'module'
   },
   rules: {
     "no-restricted-syntax": ["off", "ForInStatement"],
@@ -23,6 +23,6 @@ module.exports = {
     "no-prototype-builtins": "off",
     "no-param-reassign": ["error", { "props": false }],
     "import/extensions": ["error", "ignorePackages"],
-    "no-plusplus": "off",
-  },
+    "no-plusplus": "off"
+  }
 };

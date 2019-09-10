@@ -15,9 +15,15 @@ export default class Storage {
     this.rejected = 0;
     this.parsedCount = 0;
 
-    this.CNs = [];
     this.Config = Config;
     this.validateCountryCodes();
+
+    // for convenience concatenate variety CN codes where grouped
+    this.CNs = Object.fromEntries(
+      Object.values(Config.jsonData.cnCodes).map(
+        (k, v) => [Object.keys(Config.jsonData.cnCodes)[v], k.map((i) => i.join('.'))],
+      ),
+    );
   }
 
   validateCountryCodes() {

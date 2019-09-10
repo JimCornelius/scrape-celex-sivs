@@ -15,13 +15,13 @@ export default class CommandLineArgs {
         run: false,
       },
       '-f': {
-        command: () => { Config.parse.search = true; },
+        command: () => { Config.parse.search = false; },
         consumes: 1,
         args: [],
         run: false,
       },
       '-h': {
-        command: () => { Config.puppeteerConfig.headless = true; },
+        command: () => { Config.puppeteerConfig.headless = false; },
         consumes: 1,
         args: [],
         run: false,

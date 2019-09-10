@@ -3,7 +3,7 @@ import countries from './data/countries.json';
 import ErrCorrection from './ErrCorrection.js';
 
 export default class Config {
-  errCorrectinon = ErrCorrection;
+  static ErrCorrection = ErrCorrection;
 
   static gatherer = {
     searchText: 'the standard import values for determining the entry',
@@ -26,7 +26,7 @@ export default class Config {
   static skipToPos = 0;
 
   static parse = {
-    search: false,
+    search: true,
     celex: true,
   }
 
@@ -34,7 +34,7 @@ export default class Config {
     workerSrc: 'https://unpkg.com/pdfjs-dist@2.2.228/build/pdf.worker.js',
   }
 
-  static puppeteerConfig = { headless: false };
+  static puppeteerConfig = { headless: true };
 
   // default to all known varieties
   static selectedVarieties = [Object.keys(cnCodes)].flat();
@@ -68,7 +68,7 @@ export default class Config {
   };
 
   static selectors = {
-    title: 'doc-ti',
+    title: '.doc-ti',
     table: {
       code: '.tbl-cod',
       num: '.tbl-num',
