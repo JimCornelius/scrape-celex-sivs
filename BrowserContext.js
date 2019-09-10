@@ -48,7 +48,9 @@ export default class BrowserContext {
       .filter((a) => a.innerText.search(new RegExp(searchText, 'i')) !== -1)]
       .map((b) => ({
         celexID: [...b.querySelectorAll('dt')]
-          .filter((c) => c.innerText === 'CELEX number: ')[0].nextSibling.innerText,
+          .filter((c) => c.innerText === 'CELEX number: ').length
+          ? [...b.querySelectorAll('dt')]
+            .filter((c) => c.innerText === 'CELEX number: ')[0].nextSibling.innerText : undefined,
         date: [...b.querySelectorAll('dt')]
           .filter((c) => c.innerText === 'Date of document: ')[0].nextSibling.innerText,
       }));

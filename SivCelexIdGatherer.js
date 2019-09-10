@@ -21,10 +21,11 @@ export default class SivCelexIdGatherer {
       + `&${u.sessionID}&${u.type}&${u.lang}`
       + `&${u.scope}&${u.sortBy}&${u.sortOrder}&page=${startPage}`;
     this.iterateThroughPages(fullUrl, true, startPage);
-    await this.completedGathering();
+    await this.completedGatheringEmitted();
+    this.storage.emitter.removeAllListeners();
   }
 
-  async completedGathering() {
+  async completedGatheringEmitted() {
     await new Promise((resolve) => {
       this.storage.emitter.on('completedGathering', resolve);
     });
@@ -51,10 +52,11 @@ export default class SivCelexIdGatherer {
       this.storage.currentPage = await this.page.$eval('#pagingInput1', (el) => el.value);
 
       console.log(`Scraping results from page: ${pageNo}`);
-      const records = await this.page.evaluate(
+      let records = await this.page.evaluate(
         BrowserContext.getCelexRecords,
         this.storage.Config.gatherer.searchText,
       );
+      records = records.filter((r) => r.celexID);
 
       const rejectCount = this.storage.Config.gatherer.resultsPerPage - records.length;
 
@@ -69,7 +71,6 @@ export default class SivCelexIdGatherer {
       filteredOutRecords.forEach((item) => {
         console.log(`ID ${item.celexID} is already in the database`);
       });
-      
       await this.storage.storeCelexIDs(filteredInRecords, rejectCount);
 
       // if there's a next page use that
@@ -97,10 +98,10 @@ export default class SivCelexIdGatherer {
   }
 
   finishUp() {
-    console.log('Storing json file');
-    this.storage.storeToFile();
-    console.log('Job done');
-    this.cleanUp();
+    // don't noth storing  a test tile anymore
+    // console.log('Storing json file');
+    //  this.storage.storeToFile();
+    console.log('Gathering comoleted');
     this.storage.emitter.emit('completedGathering');
   }
 }

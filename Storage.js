@@ -195,6 +195,10 @@ export default class Storage {
     return this.celexDoc;
   }
 
+  async knownCelexCount() {
+    return this.standardIDs.find({}).count();
+  }
+
   async fileCount() {
     return this.sivDocs.find({}).count();
   }
@@ -202,7 +206,7 @@ export default class Storage {
   setCelexIDCursor(index = 0) {
     // cursor for the whole collection
     // should only be called once
-    this.cursor = this.sivDocs.find({}).skip(index);
+    this.cursor = this.standardIDs.find({}).skip(index);
     this.cursor.batchSize(20);
     return this.cursor;
   }
@@ -242,7 +246,8 @@ export default class Storage {
 
   static isStandardFormat(celexID) {
     return (
-      celexID.includes('R')
+      celexID
+      && celexID.includes('R')
       && !(celexID.includes('D')
         || celexID.includes('C')
         || celexID.includes('('))
@@ -256,7 +261,7 @@ export default class Storage {
     celexIDs.forEach((x) => {
       if (Storage.isStandardFormat(x.celexID)) {
         this.celexStandardIDs.push(x.celexID);
-      } else {
+      } else if (x.celexID) {
         this.celexNonStandardIDs.push(x.celexID);
       }
     });

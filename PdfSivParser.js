@@ -273,13 +273,13 @@ export default class PdfSivParser extends GenericSivParser {
       this.storage.Config.pdfjs.workerSrc,
     );
     // browser has control until ready to parse
-    await this.readyToParse();
+    await this.readyToParseEmitted();
+    this.storage.emitter.removeAllListeners();
     // wait for parsing to complete and we're done for this page
     await this.parsePdfTags(this.collectElements());
-    this.storage.emitter.removeAllListeners();
   }
 
-  async readyToParse() {
+  async readyToParseEmitted() {
     await new Promise((resolve) => {
       this.storage.emitter.on('readyToParse', resolve);
     });

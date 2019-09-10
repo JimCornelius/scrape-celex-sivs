@@ -15,6 +15,13 @@ export default class CelexSivScraper {
     await (new CelexSivScraper()).start();
   }
 
+  async initPuppeteer() {
+    console.log('Launching puppeteer');
+    this.browser = await puppeteer.launch(Config.puppeteerConfig);
+    [this.page] = await this.browser.pages();
+    return this.page;
+  }
+
   async start() {
     CommandLineArgs.registerArgV();
     this.storage = await Storage.createStorage(Config);
@@ -29,23 +36,12 @@ export default class CelexSivScraper {
       await parser.parseCollectedCelexFiles();
     }
 
-    this.cleanUp();
+    await this.cleanUp();
     console.log('All Complete');
-  }
-
-  async initPuppeteer() {
-    console.log('Launching puppeteer');
-    this.browser = await puppeteer.launch(Config.puppeteerConfig);
-    [this.page] = await this.browser.pages();
-    return this.page;
   }
 
   async cleanUp() {
     await this.browser.close();
     await this.storage.close();
-  }
-
-  async gotoPage(celexID) {
-    await this.page.goto(Config.eurlex.urlRoot + celexID, { waitUntil: 'load' });
   }
 }

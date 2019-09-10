@@ -21,7 +21,7 @@ export default class CommandLineArgs {
         run: false,
       },
       '-h': {
-        command: () => { Config.puppeteerConfig.headless = false; },
+        command: () => { Config.puppeteerConfig.headless = true; },
         consumes: 1,
         args: [],
         run: false,
@@ -33,7 +33,7 @@ export default class CommandLineArgs {
         run: false,
       },
       '-p': {
-        command: (pos) => { Config.gatherer.startPage = pos; },
+        command: (pos) => { Config.gatherer.startPage = Number(pos); },
         consumes: 2,
         args: [],
         run: false,

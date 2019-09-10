@@ -34,7 +34,7 @@ export default class Config {
     workerSrc: 'https://unpkg.com/pdfjs-dist@2.2.228/build/pdf.worker.js',
   }
 
-  static puppeteerConfig = { headless: true };
+  static puppeteerConfig = { headless: false };
 
   // default to all known varieties
   static selectedVarieties = [Object.keys(cnCodes)].flat();

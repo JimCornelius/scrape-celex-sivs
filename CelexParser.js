@@ -18,22 +18,30 @@ export default class CelexParser {
     await this.parseCelexFiles();
   }
 
+  async gotoPage(celexID) {
+    await this.page.goto(this.storage.Config.eurlex.urlRoot + celexID, { waitUntil: 'load' });
+  }
+
   async parseCelexFiles() {
     await this.pdfSivParser.exposeHelperFuncs(this.page);
     await this.page.setViewport({ width: 1280, height: 800 });
 
     this.storage.setCelexIDCursor(this.storage.Config.skipToPos);
-    console.log(`About to process ${await this.storage.fileCount()} files.`);
+    console.log(`About to process ${await this.storage.knownCelexCount()} files.`);
     this.iterateThroughPages(await this.storage.nextCelexDoc());
+    await this.completedParsingEmitted();
+  }
+
+  async completedParsingEmitted() {
+    await new Promise((resolve) => {
+      this.storage.emitter.on('completedParsing', resolve);
+    });
   }
 
   async iterateThroughPages(celexDoc) {
     this.storage.incrementParsedCount();
     if (celexDoc) {
-      if (celexDoc.celexID in this.storage.Config.ignore) {
-        console.log(`${celexDoc.celexID} ignored.`
-        + ` Reason: ${this.storage.Config.ignore[celexDoc.celexID]}`);
-      } else if (!await this.storage.checkSivDocExists(celexDoc.celexID)) {
+      if (!await this.storage.checkSivDocExists(celexDoc.celexID)) {
         try {
           console.log(`${this.storage.parsedCount} : Processing ${celexDoc.celexID}`);
           await this.gotoPage(celexDoc.celexID);
@@ -49,20 +57,16 @@ export default class CelexParser {
       this.iterateThroughPages(await this.storage.nextCelexDoc());
     } else {
       console.log('Completed parsing celex files');
+      this.storage.emitter.emit('completedParsing');
     }
   }
 
   async scrapeCelex(celexDoc) {
-    if (celexDoc.celexID in this.storage.Config.ignore) {
-      console.log(`${celexDoc.celexID} ignored.`
-                + ` Reason: ${this.storage.Config.ignore[celexDoc.celexID]}`);
+    const date = await HtmlSivParser.parseHTMLDate(this.page);
+    if (date === undefined) {
+      await this.pdfSivParser.parsePdf(celexDoc, this.page);
     } else {
-      const date = await HtmlSivParser.parseHTMLDate(this.page);
-      if (date === undefined) {
-        await this.pdfSivParser.parsePdf(celexDoc, this.page);
-      } else {
-        await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
-      }
+      await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
     }
   }
 }

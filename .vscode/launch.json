@@ -16,7 +16,7 @@
             "name": "Launch Program",
             "program": "${workspaceFolder}/ScrapeCelexIdSIVs.js",
             "runtimeArgs": ["--experimental-modules"],
-            "args": ["-f"]
+            "args": ["-f", "-p", "275"]
         }
     ]
 }
