@@ -56,7 +56,7 @@ export default class GenericSivParser {
     const keys = [key].flat();
     keys.forEach((k) => {
       if (k in sivRecord) {
-        if (this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry) {
+        if (this.celexDoc.celexID in this.storage.Config.ErrCorrection.knownDuplicateCountry) {
           // use the lower price
           newValue = Math.min(value, sivRecord[key]);
         } else {

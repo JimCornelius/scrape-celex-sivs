@@ -107,7 +107,7 @@ export default class Storage {
   async completeParseCelex() {
     if (Object.keys(this.celexDoc.varieties).length < this.Config.minVarieties) {
       // suspiciously short list of varieties, could be a correction, or basd parsing.
-      if (!(this.celexDoc.celexID in this.Config.dontIgnore)) {
+      if (!(this.celexDoc.celexID in this.Config.ErrCorrection.dontIgnore)) {
         console.log('Short list of varieties. Check whether it\'s a correction.');
         process.exit(1);
       }

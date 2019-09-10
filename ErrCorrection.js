@@ -25,20 +25,14 @@ static transcriptionErrors = {
   '08081092.08081094.212': '',
 };
 
-  static standardIgnoreMsg =
-      'Standard CELEX code but this is a correction'
-      + ' of earlier SIV. Manual DB correction required.';
-
   static ignore = {
-    '32001R2427': 'irrelevant document',
+    // '32001R2427': 'irrelevant document',
     '32001R1179': 'Incorrectly indexed. Lnks to a regulation'
           + ' on butter. Journal listing shows CELEX 32001R1170',
-    '31999R2594': 'amended regulation, needs manual interpretation',
-    '31996R0710': 'Contains no SIVs',
+    // '31996R0710': 'Contains no SIVs',
     '31996R0732': 'Major problems with the OCR of this document, needs manual parsing',
-    '31996R0685': 'standardIgnoreMsg',
-    '31996R0651': 'Contains no SIVs',
-    '31996R0628': 'Contains no SIVs',
+    // '31996R0651': 'Contains no SIVs',
+    // '31996R0628': 'Contains no SIVs',
   };
 
   static dontIgnore = {

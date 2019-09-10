@@ -75,7 +75,7 @@ export default class PdfSivParser extends GenericSivParser {
       const rowSize = 10;
 
       orderedElements.forEach((el) => {
-        if (!(el.innerText in this.storage.Config.filterOut)) {
+        if (!(el.innerText in this.storage.Config.ErrCorrection.filterOut)) {
           if (elements.length) {
             previous = elements[elements.length - 1];
           }
@@ -306,7 +306,7 @@ export default class PdfSivParser extends GenericSivParser {
 
   parseElement(item) {
     const txt = GenericSivParser.fixUpTextItem(item.innerText);
-    const possibleKey = this.partialVariety + txt;
+    const candidateKey = this.state.partialVariety + txt;
 
     if (!this.state.date) {
       // ignore everything till we have the date
@@ -322,17 +322,17 @@ export default class PdfSivParser extends GenericSivParser {
       this.state.lookingForVariety = true;
       this.state.country = undefined;
     } else {
-      this.interpretKeys(possibleKey, txt);
+      this.interpretKeys(candidateKey, txt);
     }
   }
 
-  interpretKeys(possibleKey, txt) {
+  interpretKeys(candidateKey, txt) {
     if (this.state.sivRecord && this.state.country === undefined) {
-      this.state.country = this.storage.findCountry(this.state.possibleKey);
+      this.state.country = this.storage.findCountry(candidateKey);
       if (this.state.country) {
         this.state.partialVariety = '';
         if ([this.state.country].flat().some((i) => this.state.sivRecord.hasOwnProperty(i))) {
-          if (!(this.celexDoc.celexID in this.storage.Config.knownDuplicateCountry)) {
+          if (!(this.celexDoc.celexID in this.storage.Config.ErrCorrection.knownDuplicateCountry)) {
             console.log(`Fatal error. Already have an entry for ${this.state.currentVariety} : ${this.state.country}`);
             process.exit(1);
           }
@@ -340,7 +340,7 @@ export default class PdfSivParser extends GenericSivParser {
       }
     }
     if (this.state.lookingForVariety && !this.state.country) {
-      this.lookForVariety(possibleKey, txt);
+      this.lookForVariety(candidateKey, txt);
     }
   }
 
@@ -350,7 +350,7 @@ export default class PdfSivParser extends GenericSivParser {
       // new variety, register it
       this.state.sivRecord = this.storage.registerVariety(variety);
       if (this.state.sivRecord === undefined) {
-        if (this.celexDoc.celexID in this.storage.Config.multiVarietyDefs) {
+        if (this.celexDoc.celexID in this.storage.Config.ErrCorrection.multiVarietyDefs) {
           this.state.sivRecord = this.storage.getVarietySiv(variety);
         } else {
           console.log(`Fatal Error. Can't create sivRecord ${variety} duplicate suspected`);
@@ -363,13 +363,14 @@ export default class PdfSivParser extends GenericSivParser {
     }
   }
 
-  lookForVariety(possibleKey, txt) {
-    let variety = this.varietyFromText(txt) || this.varietyFromText(possibleKey);
-    const trimmedV = GenericSivParser.trimVarietyCode(possibleKey);
+  lookForVariety(candidateKey, txt) {
+    let variety = this.varietyFromText(txt) || this.varietyFromText(candidateKey);
+    const trimmedV = GenericSivParser.trimVarietyCode(candidateKey);
     if (variety) {
       this.updateVariety(variety);
-    } else if ((possibleKey) in this.storage.Config.transcriptionErrors) {
-      variety = this.varietyFromText(this.storage.Config.transcriptionErrors[possibleKey]);
+    } else if ((candidateKey) in this.storage.Config.ErrCorrection.transcriptionErrors) {
+      variety = this
+        .varietyFromText(this.storage.Config.ErrCorrection.transcriptionErrors[candidateKey]);
       if (variety) {
         if (this.storage.Config.selectedVarieties.includes(variety)) {
           this.state.sivRecord = this.storage.registerVariety(variety);
@@ -378,15 +379,15 @@ export default class PdfSivParser extends GenericSivParser {
         }
         this.state.partialVariety = '';
       } else {
-        this.state.partialVariety = possibleKey;
+        this.state.partialVariety = candidateKey;
       }
     } else if (PdfSivParser.checkForPdfDate(txt)) {
       // ignore, it's just a date
     } else if (trimmedV.length && Object.values(this.storage.CNs).flat()
       .some((i) => i.startsWith(trimmedV))) {
       this.state.partialVariety = trimmedV;
-    } else if ((possibleKey.length > 3) && (/^[. 0-9]*$/.test(possibleKey))) {
-      console.log(`Fatal error: Looking for variety; ${possibleKey} does not match any known varieties`);
+    } else if ((candidateKey.length > 3) && (/^[. 0-9]*$/.test(candidateKey))) {
+      console.log(`Fatal error: Looking for variety; ${candidateKey} does not match any known varieties`);
       process.exit(1);
     }
   }

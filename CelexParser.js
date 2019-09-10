@@ -62,11 +62,16 @@ export default class CelexParser {
   }
 
   async scrapeCelex(celexDoc) {
-    const date = await HtmlSivParser.parseHTMLDate(this.page);
-    if (date === undefined) {
-      await this.pdfSivParser.parsePdf(celexDoc, this.page);
+    if (celexDoc.celexID in this.storage.Config.ErrCorrection.ignore) {
+      console.log(`${celexDoc.celexID} ignored.`
+                + ` Reason: ${this.storage.Config.ErrCorrection.ignore[celexDoc.celexID]}`);
     } else {
-      await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
+      const date = await HtmlSivParser.parseHTMLDate(this.page);
+      if (date === undefined) {
+        await this.pdfSivParser.parsePdf(celexDoc, this.page);
+      } else {
+        await this.htmlSivParser.parseHTML(celexDoc, this.page, date);
+      }
     }
   }
 }
