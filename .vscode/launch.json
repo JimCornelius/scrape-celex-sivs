@@ -14,7 +14,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/ScrapeCelexIdSIVs.js",
+            "program": "${workspaceFolder}/scrape-celex-sivs.js",
             "runtimeArgs": ["--experimental-modules"],
             "args": ["-f", "-s", "5470"]
         }
