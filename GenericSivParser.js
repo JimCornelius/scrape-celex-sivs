@@ -4,6 +4,11 @@ export default class GenericSivParser {
   static fixUpTextItem(txt) {
     // some known OCR errors
     return txt
+      .replace('134,7 ,', '134.7')
+      .replace('5.5,1', '55.1')
+      .replace('69f 9', '69.9')
+      .replace('77?', '77,9')
+      .replace('77β', '77,9')
       .replace('55,6.', '55.6')
       .replace('1ob,U', '186.0')
       .replace('MZ', '512')
@@ -29,7 +34,7 @@ export default class GenericSivParser {
       .replace(/,/g, '.')
       .replace(/\.\./g, '.')
       .replace(/ß/g, '.9')
-      .replace(/-/g, '') // known typo
+      .replace(/-/g, '')
       .replace(/[^\x00-\x7F]/g, ''); // extraneous characters
   }
 
@@ -43,10 +48,12 @@ export default class GenericSivParser {
   }
 
   varietyFromText(textItem) {
-    const txt = GenericSivParser.trimVarietyCode(textItem);
-    // if two or three characters it's a country code. Not interested
-    if (txt.length !== 2 && txt.length !== 3) {
-      return this.storage.findVariety(txt);
+    if (textItem !== undefined) {
+      const txt = GenericSivParser.trimVarietyCode(textItem);
+      // if two or three characters it's a country code. Not interested
+      if (txt.length !== 2 && txt.length !== 3) {
+        return this.storage.findVariety(txt);
+      }
     }
     return undefined;
   }

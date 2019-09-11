@@ -37,7 +37,7 @@ export default class CelexSivScraper {
     }
 
     await this.cleanUp();
-    console.log('All Complete');
+    console.log('All done. End.');
   }
 
   async cleanUp() {

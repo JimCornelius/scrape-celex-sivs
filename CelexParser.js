@@ -10,6 +10,7 @@ export default class CelexParser {
   constructor(page, storage) {
     this.page = page;
     this.storage = storage;
+    this.completed = false;
   }
 
   async parseCollectedCelexFiles() {
@@ -34,7 +35,11 @@ export default class CelexParser {
 
   async completedParsingEmitted() {
     await new Promise((resolve) => {
-      this.storage.emitter.on('completedParsing', resolve);
+      if (this.completed) {
+        resolve();
+      } else {
+        this.storage.emitter.on('completedParsing', resolve);
+      }
     });
   }
 
@@ -56,7 +61,8 @@ export default class CelexParser {
       }
       this.iterateThroughPages(await this.storage.nextCelexDoc());
     } else {
-      console.log('Completed parsing celex files');
+      console.log('completed parsing celex files');
+      this.completed = true;
       this.storage.emitter.emit('completedParsing');
     }
   }

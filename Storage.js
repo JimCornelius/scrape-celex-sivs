@@ -181,8 +181,10 @@ export default class Storage {
       this.celexDoc.varieties[variety] = {};
       return this.celexDoc.varieties[variety];
     }
-    console.log(`attempting to create duplicate variety record for ${variety}`
+    if (!(this.celexDoc.celexID in this.Config.ErrCorrection.multiVarietyDefs)) {
+      console.log(`Attempting to create duplicate variety record for ${variety}`
         + ` in CELEX:${this.celexDoc.celexID}`);
+    }
     return undefined;
   }
 
@@ -212,7 +214,8 @@ export default class Storage {
   setCelexIDCursor(index = 0) {
     // cursor for the whole collection
     // should only be called once
-    this.cursor = this.standardIDs.find({}).skip(index);
+    this.cursor = this.standardIDs.find({}).skip(Number(index));
+    this.parsedCount = index;
     this.cursor.batchSize(20);
     return this.cursor;
   }

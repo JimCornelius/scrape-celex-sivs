@@ -112,6 +112,7 @@ export default class PdfSivParser extends GenericSivParser {
 
   static fixTranscriptionErr(element) {
     return element.innerText
+      .replace('100 kv )', '100 kg')
       .replace('\'ECU', '(ECU')
       .replace(/[^\w(/)]|_+/g, '')
       .replace('WO', '100')
@@ -128,6 +129,12 @@ export default class PdfSivParser extends GenericSivParser {
 
     // known OCR transcription issues
     elements.every((el, i) => {
+      if (el.innerText.includes('stands')
+        && i > 0
+        && elements[i - 1].innerText.includes('999')) {
+        elements[i - 1].innerText = 'ignore';
+      }
+
       if (this.celexDoc.celexID === '31996R0378' && el.innerText === '528') {
         if (i > 0 && elements[i - 1].innerText === '29,5') {
           el.innerText = '728';
@@ -274,7 +281,6 @@ export default class PdfSivParser extends GenericSivParser {
     );
     // browser has control until ready to parse
     await this.readyToParseEmitted();
-    this.storage.emitter.removeAllListeners();
     // wait for parsing to complete and we're done for this page
     await this.parsePdfTags(this.collectElements());
   }
@@ -369,14 +375,16 @@ export default class PdfSivParser extends GenericSivParser {
     if (variety) {
       this.updateVariety(variety);
     } else if ((candidateKey) in this.storage.Config.ErrCorrection.transcriptionErrors) {
-      variety = this
-        .varietyFromText(this.storage.Config.ErrCorrection.transcriptionErrors[candidateKey]);
+      const candidateVal = this.storage.Config.ErrCorrection.transcriptionErrors[candidateKey];
+      variety = this.varietyFromText(candidateVal);
       if (variety) {
         if (this.storage.Config.selectedVarieties.includes(variety)) {
           this.state.sivRecord = this.storage.registerVariety(variety);
           this.state.lookingForVariety = false;
           this.state.country = undefined;
         }
+        this.state.partialVariety = '';
+      } else if (candidateVal === 'ignore') {
         this.state.partialVariety = '';
       } else {
         this.state.partialVariety = candidateKey;
