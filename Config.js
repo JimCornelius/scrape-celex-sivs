@@ -56,14 +56,10 @@ export default class Config {
         useNewUrlParser: true,
         useUnifiedTopology: true,
       },
-      dbName: 'EuSiv2',
+      dbName: 'EuSiv',
       sivDocs: 'sivDocs',
       standardIDs: 'sivCelex',
       nonStandardIDs: 'nonSivCelex',
-    },
-    file: {
-      standardIDs: 'EuSIV.json',
-      nonStandardIDs: 'EuSIVnonStandard.json',
     },
   };
 
