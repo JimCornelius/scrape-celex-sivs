@@ -1,29 +1,29 @@
 {
-  "name": "scrapecelexsivs",
+  "name": "scrape-celex-sivs",
   "version": "1.0.0",
   "description": "",
-  "main": "ScrapeCelexIdSivs.js",
+  "main": "scrape-celex-sivs.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JimCornelius/ScrapeCelexSIVs.git"
+    "url": "git+https://github.com/JimCornelius/scrape-celex-sivs.git"
   },
   "author": "Jim Cornelius",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/JimCornelius/ScrapeCelexSIVs/issues"
+    "url": "https://github.com/JimCornelius/scrape-celex-sivs/issues"
   },
-  "homepage": "https://github.com/JimCornelius/ScrapeCelexSIVs#readme",
+  "homepage": "https://github.com/JimCornelius/scrape-celex-sivs#readme",
   "dependencies": {
     "mongodb": "^3.3.0",
     "puppeteer": "^1.19.0"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.3",
-    "eslint": "^6.2.2",
+    "eslint": "^6.1.0",
     "eslint-config-airbnb": "^18.0.1",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-config-babel": "^9.0.0",
