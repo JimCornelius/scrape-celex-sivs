@@ -8,17 +8,18 @@ Node app to scrape file IDs from https://eur-lex.europa.eu, and procces them to 
 4. PDF scraping is performed with the assistenceo pdfjs injected into the client side. 
 
 Usage:  
+node --experimental-modules **scrape-celex-sivs.js**   \[options\]
 
-node --experimental-modules scrape-celex-sivs.js\n  
-Commandline optons: 
--c    : reset celex id documents <use with utmost extreme caution> 
--d    : reset SIV documents <use with extreme caution> 
--f    : turn off auto-gathering of CelexIDs 
--h    : turn headless mode off. Chromium broswer becomes visible  
--l    : reset log  
--p n  : start gathering at page n instead of the first page. 
--s n  : skip to position n in list of celed ids before processing
--x    : turn off processing of CelexIDs into SIVs
+Commandline optons:
+
+-c    : reset celex id documents <use with utmost extreme caution>
+  -d    : reset SIV documents <use with extreme caution>  
+  -f    : turn off auto-gathering of CelexIDs  
+  -h    : turn headless mode off. Chromium broswer becomes visible  
+  -l    : reset log  
+  -p n  : start gathering at page n instead of the first page  
+  -s n  : skip to position n in list of celed ids before processing  
+  -x    : turn off processing of CelexIDs into SIVs
 
 Requirements:  
 Node.js, obviously, and mongodb running on local host default port. No security measures assumed.
