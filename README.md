@@ -10,9 +10,9 @@ Node app to scrape file IDs from https://eur-lex.europa.eu, and procces them to 
 Usage:  
 node --experimental-modules **scrape-celex-sivs.js**   \[options\]
 
-Commandline optons:
+Command line optons:
 
--c    : reset celex id documents <use with utmost extreme caution>
+  -c    : reset celex id documents <use with utmost extreme caution>
   -d    : reset SIV documents <use with extreme caution>  
   -f    : turn off auto-gathering of CelexIDs  
   -h    : turn headless mode off. Chromium broswer becomes visible  
