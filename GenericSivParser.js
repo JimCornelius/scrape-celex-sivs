@@ -76,8 +76,7 @@ export default class GenericSivParser {
   }
 
   storeRecord(celexDoc, variety, sivRecord) {
-    // ensure this variety doesn't already exist in
-    // this.celexDoc.varieties object
+    // ensure this variety doesn't already exist
     if (!celexDoc.varieties.hasOwnProperty(variety)) {
       celexDoc.varieties[variety] = sivRecord;
     } else {
