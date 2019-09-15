@@ -33,18 +33,18 @@ export default class PdfSivParser extends GenericSivParser {
       //
       // On a large document there will pages where the text layer is not loaded into the DOM.
       // A <loadingIcon> element will exist in place of the span tags
-      // As each loadingIcon is scrolled into view pdfJSLibe populates the textLayer.
+      // As each loadingIcon is scrolled into view pdfJSLib populates the textLayer.
       // We can then extract the tags to allow the page to be parsed.
       //
       // Scrolling a page out of view will remove the spans in the textlayer,
-      // so the tags must be capturesd wthile the page is in view.
+      // so the tags must be captured while the page is in view.
       // The container holds 2 pages at any one time on a normal scaled view.
       //
-      // Only scroll new Pages into view after current text layer tags are captured
+      // Only scroll new pages into view after current textlayer tags are captured
 
       this.pageTags = new Array(val).fill(null);
     } else if (event === 'textlayerrendered') {
-      // text layer for page X is now in the DOM and can be parsed
+      // text layer for page 'val' is now in the DOM and can be parsed
       // capture the span tags in the current page
       this.pageTags[val - 1] = await this.getPageSpanElements(val);
 
