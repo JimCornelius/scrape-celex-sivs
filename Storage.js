@@ -58,7 +58,7 @@ export default class Storage {
     this.sivDocs.createIndex({ celexID: 1 }, { unique: true });
 
     if (this.Config.storage.setResetCelexDB) {
-      console.log('resetting Celed ID list');
+      console.log('resetting Celex ID list');
       await this.standardIDs.drop();
       await this.nonStandardIDs.drop();
       this.standardIDs.createIndex({ 'celexID': 1 }, { unique: true });
@@ -66,10 +66,10 @@ export default class Storage {
     }
 
     if (this.Config.storage.setResetDocDB) {
-      console.log('resetting database');
+      console.log('resetting sivDos db');
+      await this.sivDocs.drop();
       this.sivDocs = this.db.collection(this.Config.storage.mongo.sivDocs);
       this.sivDocs.createIndex({ 'celexID': 1 }, { unique: true });
-      await this.sivDocs.drop();
     }
 
     this.messageLog = this.db.collection('messageLog');
